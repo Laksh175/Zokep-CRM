@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Layers, LogIn, Lock, Mail, ShieldAlert, Sparkles, ArrowRight } from 'lucide-react';
+import { Layers, LogIn, Lock, Mail, ShieldAlert, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -37,12 +37,6 @@ export const LoginPage = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Quick filler for testing
-  const fillCredentials = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
   };
 
   return (
@@ -130,26 +124,6 @@ export const LoginPage = () => {
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
-
-          {/* Quick Demo Filler for Super Admin */}
-          <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '10px' }}>
-              <Sparkles size={14} color="#f59e0b" />
-              <span>Platform Owner (Super Admin):</span>
-            </div>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              style={{ width: '100%', justifyContent: 'space-between', fontSize: '12px', padding: '10px 14px' }}
-              onClick={() => fillCredentials('superadmin@zokepcrm.com', 'SuperAdmin@123')}
-            >
-              <span>👑 Super Admin</span>
-              <code>superadmin@zokepcrm.com</code>
-            </button>
-            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '8px 0 0', textAlign: 'center' }}>
-              Create fresh Admin accounts from the Landing Page or Checkout!
-            </p>
-          </div>
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
