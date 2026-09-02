@@ -20,30 +20,15 @@ export const Navbar = () => {
     <nav className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '16px 0' }}>
       <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Brand Logo */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-          <div
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+          <img
+            src="/logo.png"
+            alt="ZOKEP CRM"
             style={{
-              width: 38,
-              height: 38,
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(99, 102, 241, 0.4)',
-              color: '#ffffff',
+              height: '38px',
+              objectFit: 'contain',
             }}
-          >
-            <Layers size={22} />
-          </div>
-          <div>
-            <span style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              Zokep<span style={{ color: 'var(--primary-500)' }}>CRM</span>
-            </span>
-            <span style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-              SaaS Lead Platform
-            </span>
-          </div>
+          />
         </Link>
 
         {/* Navigation Links */}

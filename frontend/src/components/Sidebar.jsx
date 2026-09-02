@@ -33,30 +33,27 @@ export const Sidebar = () => {
   return (
     <aside className="sidebar">
       {/* Brand Header */}
-      <div style={{ padding: '24px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <div
+      <div
+        style={{
+          padding: '24px 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <img
+          src="/logo.png"
+          alt="ZOKEP CRM"
           style={{
-            width: 36,
-            height: 36,
-            borderRadius: '8px',
-            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#ffffff',
-            flexShrink: 0,
+            maxHeight: '46px',
+            maxWidth: '190px',
+            width: 'auto',
+            objectFit: 'contain',
+            display: 'block',
+            margin: '0 auto',
           }}
-        >
-          <Layers size={20} />
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <h4 style={{ fontSize: '16px', fontWeight: 700, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {user?.companyName || 'Zokep CRM'}
-          </h4>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            {isSuperAdmin ? 'Super Admin Portal' : isAdmin ? 'Admin Workspace' : 'Sales Consultant'}
-          </span>
-        </div>
+        />
       </div>
 
       {/* Subscription Banner for Admin */}

@@ -481,10 +481,9 @@ export const LandingPage = () => {
       {/* Footer */}
       <footer style={{ borderTop: '1px solid var(--border-subtle)', padding: '40px 24px', background: 'var(--bg-surface)', marginTop: '60px' }}>
         <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Layers size={20} color="#6366f1" />
-            <span style={{ fontWeight: 800, fontSize: '16px' }}>Zokep CRM</span>
-            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>&copy; {new Date().getFullYear()} All rights reserved.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <img src="/logo.png" alt="ZOKEP CRM" style={{ height: '32px', objectFit: 'contain' }} />
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>&copy; {new Date().getFullYear()} ZOKEP CRM. All rights reserved.</span>
           </div>
           <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: 'var(--text-secondary)' }}>
             <Link to="/login">Universal Login</Link>

@@ -4,7 +4,7 @@ const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('zokep_crm_theme') || 'dark';
+    return localStorage.getItem('zokep_crm_theme') || 'light';
   });
 
   useEffect(() => {

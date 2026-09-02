@@ -264,10 +264,10 @@ export const PublicLeadFormPage = () => {
           )}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
-          Powered by{' '}
-          <Link to="/" style={{ color: 'var(--primary-500)', fontWeight: 600 }}>
-            Zokep CRM
+        <div style={{ textAlign: 'center', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+          <span>Powered by</span>
+          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none' }}>
+            <img src="/logo.png" alt="ZOKEP CRM" style={{ height: '20px', objectFit: 'contain' }} />
           </Link>
         </div>
       </div>

@@ -85,30 +85,20 @@ export const LoginPage = () => {
 
       <div style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 1 }}>
         {/* Brand Header */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', textDecoration: 'none', marginBottom: '12px' }}>
-            <div
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+          <Link to="/" style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '16px' }}>
+            <img
+              src="/logo.png"
+              alt="ZOKEP CRM"
               style={{
-                width: 44,
-                height: 44,
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 8px 20px rgba(99, 102, 241, 0.4)',
-                color: '#ffffff',
+                height: '52px',
+                objectFit: 'contain',
               }}
-            >
-              <Layers size={26} />
-            </div>
-            <span style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-              Zokep<span style={{ color: 'var(--primary-500)' }}>CRM</span>
-            </span>
+            />
           </Link>
-          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Sign in to your account</h2>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>Sign in to your CRM workspace</h2>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-            Universal portal for Super Admin, Tenant Admins & Staff
+            Multi-tenant portal for Admin, Staff & Platform Managers
           </p>
         </div>
 
