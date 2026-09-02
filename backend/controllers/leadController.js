@@ -415,19 +415,19 @@ export const reassignLead = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
-    const { assignedToId } = req.body;
+    const targetAssignee = req.body.assignedTo || req.body.assignedToId || null;
 
     const lead = await Lead.findOne({ _id: id, tenantId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
     let staffName = 'Unassigned';
-    if (assignedToId) {
-      const staff = await User.findOne({ _id: assignedToId, tenantId, role: 'staff' });
+    if (targetAssignee) {
+      const staff = await User.findOne({ _id: targetAssignee, tenantId, role: 'staff' });
       if (!staff) return res.status(400).json({ success: false, message: 'Invalid staff member' });
       staffName = staff.name;
     }
 
-    lead.assignedTo = assignedToId || null;
+    lead.assignedTo = targetAssignee || null;
     await lead.save();
 
     await ActivityLog.create({

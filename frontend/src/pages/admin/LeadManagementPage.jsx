@@ -293,9 +293,10 @@ export const LeadManagementPage = () => {
     try {
       const res = await api.put(`/leads/${leadId}/reassign`, {
         assignedTo: newAssignedTo || null,
+        assignedToId: newAssignedTo || null,
       });
       if (res.success) {
-        success('Lead assignee updated successfully');
+        success(res.message || 'Lead assignee updated successfully');
         fetchLeads();
         if (activeLead && activeLead._id === leadId) {
           setActiveLead(res.data);
@@ -525,13 +526,13 @@ export const LeadManagementPage = () => {
                               background: 'var(--bg-surface)',
                               borderRadius: '6px',
                             }}
-                            value={lead.assignedTo?._id || lead.assignedTo || ''}
+                            value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
                             onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
                             title="Assign to staff member"
                           >
                             <option value="">-- Unassigned --</option>
                             {staffList.map((s) => (
-                              <option key={s.id} value={s.id}>
+                              <option key={s._id || s.id} value={s._id || s.id}>
                                 {s.name}
                               </option>
                             ))}
@@ -674,13 +675,13 @@ export const LeadManagementPage = () => {
                           <select
                             className="form-select"
                             style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '120px' }}
-                            value={lead.assignedTo?._id || lead.assignedTo || ''}
+                            value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
                           >
                             <option value="">-- Unassigned --</option>
                             {staffList.map((s) => (
-                              <option key={s.id} value={s.id}>
+                              <option key={s._id || s.id} value={s._id || s.id}>
                                 {s.name}
                               </option>
                             ))}
@@ -964,12 +965,12 @@ export const LeadManagementPage = () => {
               <select
                 className="form-select"
                 style={{ maxWidth: '220px', fontSize: '13px', padding: '4px 8px' }}
-                value={activeLead.assignedTo?._id || activeLead.assignedTo || ''}
+                value={activeLead.assignedTo?._id || activeLead.assignedTo?.id || (typeof activeLead.assignedTo === 'string' ? activeLead.assignedTo : '')}
                 onChange={(e) => handleQuickReassign(activeLead._id, e.target.value)}
               >
                 <option value="">-- Unassigned --</option>
                 {staffList.map((s) => (
-                  <option key={s.id} value={s.id}>
+                  <option key={s._id || s.id} value={s._id || s.id}>
                     {s.name} ({s.email})
                   </option>
                 ))}

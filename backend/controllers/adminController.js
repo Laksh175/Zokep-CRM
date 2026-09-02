@@ -117,6 +117,7 @@ export const getStaffMembers = async (req, res) => {
         const convertedCount = await Lead.countDocuments({ tenantId, assignedTo: s._id, isConverted: true });
         return {
           id: s._id,
+          _id: s._id,
           name: s.name,
           email: s.email,
           phone: s.phone,
