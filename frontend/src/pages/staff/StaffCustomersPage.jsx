@@ -4,6 +4,7 @@ import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const StaffCustomersPage = () => {
   const { error } = useToast();
@@ -94,7 +95,7 @@ export const StaffCustomersPage = () => {
                       </td>
                       <td>{c.phone}</td>
                       <td>{c.email || '-'}</td>
-                      <td>{c.convertedAt ? new Date(c.convertedAt).toLocaleDateString() : 'Recent'}</td>
+                      <td>{c.convertedAt ? formatDate(c.convertedAt) : 'Recent'}</td>
                     </tr>
                   ))}
                 </tbody>

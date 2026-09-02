@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import Plan from '../models/Plan.js';
 import Subscription from '../models/Subscription.js';
 import Lead from '../models/Lead.js';
+import { formatDate } from '../utils/dateFormatter.js';
 
 // @desc    Get Super Admin Platform Dashboard Metrics & Analytics
 // @route   GET /api/superadmin/analytics
@@ -224,7 +225,7 @@ export const extendSubscription = async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Subscription extended by ${days} days until ${newEnd.toLocaleDateString()}.`,
+      message: `Subscription extended by ${days} days until ${formatDate(newEnd)}.`,
       data: sub,
     });
   } catch (error) {

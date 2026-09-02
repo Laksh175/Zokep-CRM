@@ -17,6 +17,7 @@ import Modal from '../../components/Modal';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const StaffManagementPage = () => {
   const { success, error } = useToast();
@@ -171,7 +172,7 @@ export const StaffManagementPage = () => {
                       <td>
                         <strong>{staff.name}</strong>
                         <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          Joined: {new Date(staff.createdAt).toLocaleDateString()}
+                          Joined: {formatDate(staff.createdAt)}
                         </div>
                       </td>
                       <td>

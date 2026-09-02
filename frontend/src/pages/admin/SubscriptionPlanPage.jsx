@@ -17,6 +17,7 @@ import RazorpayCheckoutModal from '../../components/RazorpayCheckoutModal';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const SubscriptionPlanPage = () => {
   const { refreshMe } = useAuth();
@@ -92,7 +93,7 @@ export const SubscriptionPlanPage = () => {
               <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '6px 0 0' }}>
                 {isExpired
                   ? 'Your subscription expired. Renew now to restore full write capabilities.'
-                  : `Your plan is valid until ${new Date(current?.endDate).toLocaleDateString()} (${current?.daysRemaining} days remaining)`}
+                  : `Your plan is valid until ${formatDate(current?.endDate)} (${current?.daysRemaining} days remaining)`}
               </p>
             </div>
 
@@ -206,10 +207,10 @@ export const SubscriptionPlanPage = () => {
                       <Badge color="#6366f1">Razorpay Verified</Badge>
                     </td>
                     <td>
-                      {new Date(hist.startDate).toLocaleDateString()} &rarr; {new Date(hist.endDate).toLocaleDateString()}
+                      {formatDate(hist.startDate)} &rarr; {formatDate(hist.endDate)}
                     </td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                      {new Date(hist.createdAt).toLocaleDateString()}
+                      {formatDate(hist.createdAt)}
                     </td>
                   </tr>
                 ))}

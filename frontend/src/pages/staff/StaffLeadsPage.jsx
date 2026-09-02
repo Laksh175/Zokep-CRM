@@ -20,6 +20,7 @@ import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate, formatDateTime } from '../../utils/date';
 import confetti from 'canvas-confetti';
 
 export const StaffLeadsPage = () => {
@@ -332,7 +333,7 @@ export const StaffLeadsPage = () => {
                       <td>
                         {lead.nextFollowupDate ? (
                           <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
-                            {new Date(lead.nextFollowupDate).toLocaleDateString()}
+                            {formatDate(lead.nextFollowupDate)}
                           </span>
                         ) : (
                           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
@@ -608,7 +609,7 @@ export const StaffLeadsPage = () => {
                   <div key={act._id} style={{ background: 'var(--bg-surface-elevated)', padding: '10px 14px', borderRadius: '8px', fontSize: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
                       <strong>{act.title}</strong>
-                      <span style={{ color: 'var(--text-muted)' }}>{new Date(act.createdAt).toLocaleDateString()}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>{formatDateTime(act.createdAt)}</span>
                     </div>
                     {act.note && <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{act.note}</p>}
                   </div>

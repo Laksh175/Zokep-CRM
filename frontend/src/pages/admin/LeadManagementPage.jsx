@@ -34,6 +34,7 @@ import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate, formatDateTime } from '../../utils/date';
 import confetti from 'canvas-confetti';
 
 export const LeadManagementPage = () => {
@@ -288,6 +289,23 @@ export const LeadManagementPage = () => {
     }
   };
 
+  const handleQuickReassign = async (leadId, newAssignedTo) => {
+    try {
+      const res = await api.put(`/leads/${leadId}/reassign`, {
+        assignedTo: newAssignedTo || null,
+      });
+      if (res.success) {
+        success('Lead assignee updated successfully');
+        fetchLeads();
+        if (activeLead && activeLead._id === leadId) {
+          setActiveLead(res.data);
+        }
+      }
+    } catch (err) {
+      error(err.message || 'Failed to reassign lead');
+    }
+  };
+
   const handleExportCSV = async () => {
     try {
       const blob = await api.get('/leads/export-csv');
@@ -497,16 +515,32 @@ export const LeadManagementPage = () => {
                           </Badge>
                         </td>
                         <td>
-                          {lead.assignedTo ? (
-                            <span style={{ fontSize: '13px', fontWeight: 500 }}>{lead.assignedTo.name}</span>
-                          ) : (
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Unassigned</span>
-                          )}
+                          <select
+                            className="form-select"
+                            style={{
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              height: 'auto',
+                              minWidth: '130px',
+                              background: 'var(--bg-surface)',
+                              borderRadius: '6px',
+                            }}
+                            value={lead.assignedTo?._id || lead.assignedTo || ''}
+                            onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                            title="Assign to staff member"
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {staffList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td>
                           {lead.nextFollowupDate ? (
                             <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
-                              {new Date(lead.nextFollowupDate).toLocaleDateString()}
+                              {formatDate(lead.nextFollowupDate)}
                             </span>
                           ) : (
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
@@ -514,6 +548,15 @@ export const LeadManagementPage = () => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {/* Edit Lead */}
+                            <button
+                              onClick={() => openEditLeadModal(lead)}
+                              className="btn btn-secondary btn-sm"
+                              title="Edit Lead Information"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+
                             {/* 1-Click WhatsApp */}
                             <button
                               onClick={() => {
@@ -556,9 +599,18 @@ export const LeadManagementPage = () => {
                             <button
                               onClick={() => openLeadDetails(lead)}
                               className="btn btn-secondary btn-sm"
-                              title="Open Details"
+                              title="Open Details & Timeline"
                             >
                               <ExternalLink size={13} />
+                            </button>
+
+                            {/* Delete */}
+                            <button
+                              onClick={() => handleDeleteLead(lead._id)}
+                              className="btn btn-danger btn-sm"
+                              title="Delete Lead"
+                            >
+                              <Trash2 size={13} />
                             </button>
                           </div>
                         </td>
@@ -596,17 +648,43 @@ export const LeadManagementPage = () => {
                         className="kanban-card"
                         onClick={() => openLeadDetails(lead)}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                          <strong style={{ fontSize: '14px' }}>{lead.name}</strong>
-                          <span style={{ fontWeight: 700, color: '#10b981', fontSize: '13px' }}>
-                            ₹{lead.dealValue || 0}
-                          </span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{lead.name}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span style={{ fontWeight: 700, color: '#10b981', fontSize: '13px' }}>
+                              ₹{lead.dealValue || 0}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openEditLeadModal(lead);
+                              }}
+                              className="btn-icon btn-secondary"
+                              style={{ width: 22, height: 22, padding: 0 }}
+                              title="Edit Lead"
+                            >
+                              <Edit2 size={11} />
+                            </button>
+                          </div>
                         </div>
                         <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                           {lead.company || lead.phone}
                         </p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)' }}>
-                          <span>{lead.assignedTo ? lead.assignedTo.name : 'Unassigned'}</span>
+                          <select
+                            className="form-select"
+                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '120px' }}
+                            value={lead.assignedTo?._id || lead.assignedTo || ''}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                          >
+                            <option value="">-- Unassigned --</option>
+                            {staffList.map((s) => (
+                              <option key={s.id} value={s.id}>
+                                {s.name}
+                              </option>
+                            ))}
+                          </select>
                           {lead.isConverted && <span style={{ color: '#10b981', fontWeight: 700 }}>Won 🎉</span>}
                         </div>
                       </div>
@@ -877,6 +955,27 @@ export const LeadManagementPage = () => {
               </div>
             )}
 
+            {/* Lead Assignment Card */}
+            <div style={{ background: 'var(--bg-surface)', padding: '14px 18px', borderRadius: '10px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <User size={16} color="var(--primary-400)" />
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>Assigned Consultant:</span>
+              </div>
+              <select
+                className="form-select"
+                style={{ maxWidth: '220px', fontSize: '13px', padding: '4px 8px' }}
+                value={activeLead.assignedTo?._id || activeLead.assignedTo || ''}
+                onChange={(e) => handleQuickReassign(activeLead._id, e.target.value)}
+              >
+                <option value="">-- Unassigned --</option>
+                {staffList.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Log Followup & Update Status Section */}
             <div style={{ background: 'var(--bg-surface-elevated)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-medium)' }}>
               <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>
@@ -948,7 +1047,7 @@ export const LeadManagementPage = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                         <strong>{act.title}</strong>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                          {new Date(act.createdAt).toLocaleString()} • by {act.performedBy?.name || 'User'}
+                          {formatDateTime(act.createdAt)} • by {act.performedBy?.name || 'User'}
                         </span>
                       </div>
                       {act.note && <p style={{ margin: 0, color: 'var(--text-secondary)' }}>{act.note}</p>}

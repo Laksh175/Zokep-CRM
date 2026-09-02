@@ -16,6 +16,7 @@ import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const AdminManagementPage = () => {
   const { success, error } = useToast();
@@ -221,7 +222,7 @@ export const AdminManagementPage = () => {
                                 {sub.planName} ({isSubExpired ? 'Expired' : 'Active'})
                               </Badge>
                               <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                Ends: {new Date(sub.endDate).toLocaleDateString()}
+                                Ends: {formatDate(sub.endDate)}
                               </div>
                             </div>
                           ) : (

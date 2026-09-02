@@ -5,6 +5,7 @@ import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const CustomerListPage = () => {
   const { error } = useToast();
@@ -113,7 +114,7 @@ export const CustomerListPage = () => {
                         {c.assignedTo?.name || 'Admin'}
                       </td>
                       <td>
-                        {c.convertedAt ? new Date(c.convertedAt).toLocaleDateString() : 'Recent'}
+                        {c.convertedAt ? formatDate(c.convertedAt) : 'Recent'}
                       </td>
                     </tr>
                   ))}

@@ -6,6 +6,7 @@ import LeadStatus from '../models/LeadStatus.js';
 import CustomField from '../models/CustomField.js';
 import ActivityLog from '../models/ActivityLog.js';
 import User from '../models/User.js';
+import { formatDate } from '../utils/dateFormatter.js';
 
 // @desc    Get all leads with advanced filtering & role scoping
 // @route   GET /api/leads
@@ -572,8 +573,8 @@ export const exportLeadsCSV = async (req, res) => {
         Source: l.source,
         'Is Converted': l.isConverted ? 'Yes' : 'No',
         'Converted Amount': l.convertedDealAmount || 0,
-        'Next Followup': l.nextFollowupDate ? new Date(l.nextFollowupDate).toLocaleDateString() : '',
-        'Created Date': new Date(l.createdAt).toLocaleDateString(),
+        'Next Followup': l.nextFollowupDate ? formatDate(l.nextFollowupDate) : '',
+        'Created Date': formatDate(l.createdAt),
         Notes: l.notes || '',
       };
 

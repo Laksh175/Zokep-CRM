@@ -3,6 +3,7 @@ import Razorpay from 'razorpay';
 import Plan from '../models/Plan.js';
 import Subscription from '../models/Subscription.js';
 import User from '../models/User.js';
+import { formatDate } from '../utils/dateFormatter.js';
 
 let razorpayInstance = null;
 
@@ -149,7 +150,7 @@ export const verifyRazorpayPaymentAndRenew = async (req, res) => {
 
     return res.json({
       success: true,
-      message: `Subscription successfully renewed for ${months} month(s) with ${plan.name} until ${endDate.toLocaleDateString()}!`,
+      message: `Subscription successfully renewed for ${months} month(s) with ${plan.name} until ${formatDate(endDate)}!`,
       subscription,
     });
   } catch (error) {

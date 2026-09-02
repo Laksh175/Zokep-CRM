@@ -16,6 +16,7 @@ import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 import { Link } from 'react-router-dom';
 
 export const AdminDashboard = () => {
@@ -196,7 +197,7 @@ export const AdminDashboard = () => {
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: '12px', fontWeight: 600, color: '#f59e0b' }}>
-                        {new Date(lead.nextFollowupDate).toLocaleDateString()}
+                        {formatDate(lead.nextFollowupDate)}
                       </div>
                       <Badge color={lead.statusId?.color || '#3b82f6'} size="sm">
                         {lead.statusId?.name || 'In Progress'}

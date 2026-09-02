@@ -15,6 +15,7 @@ import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 import { Link } from 'react-router-dom';
 
 export const StaffDashboard = () => {
@@ -157,7 +158,7 @@ export const StaffDashboard = () => {
                     <div>
                       <strong>{lead.name}</strong>
                       <div style={{ fontSize: '11px', color: '#f87171' }}>
-                        Due since: {new Date(lead.nextFollowupDate).toLocaleDateString()}
+                        Due since: {formatDate(lead.nextFollowupDate)}
                       </div>
                     </div>
                     <Link to="/staff/leads" className="btn btn-secondary btn-sm">

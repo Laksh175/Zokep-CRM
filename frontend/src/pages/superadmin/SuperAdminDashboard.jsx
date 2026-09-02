@@ -17,6 +17,7 @@ import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { formatDate } from '../../utils/date';
 
 export const SuperAdminDashboard = () => {
   const { success, error } = useToast();
@@ -139,7 +140,7 @@ export const SuperAdminDashboard = () => {
                         <Badge color="#f59e0b">{sub.planId?.name || 'Standard'}</Badge>
                       </td>
                       <td style={{ color: '#f87171', fontWeight: 600 }}>
-                        {new Date(sub.endDate).toLocaleDateString()}
+                        {formatDate(sub.endDate)}
                       </td>
                       <td>
                         <button
@@ -200,9 +201,9 @@ export const SuperAdminDashboard = () => {
                         {sub.status}
                       </Badge>
                     </td>
-                    <td>{new Date(sub.endDate).toLocaleDateString()}</td>
+                    <td>{formatDate(sub.endDate)}</td>
                     <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
-                      {new Date(sub.createdAt).toLocaleDateString()}
+                      {formatDate(sub.createdAt)}
                     </td>
                   </tr>
                 ))}
