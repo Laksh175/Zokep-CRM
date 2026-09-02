@@ -9,18 +9,24 @@ export const Header = ({ title, subtitle, actions }) => {
   return (
     <header
       style={{
-        padding: '20px 32px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 30,
+        padding: '18px 32px',
         borderBottom: '1px solid var(--border-subtle)',
-        background: 'var(--bg-surface)',
+        background: 'rgba(255, 255, 255, 0.96)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         flexWrap: 'wrap',
         gap: '16px',
+        boxShadow: '0 1px 3px 0 rgba(0, 34, 68, 0.04)',
       }}
     >
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>{title}</h1>
+        <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>{title}</h1>
         {subtitle && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>{subtitle}</p>}
       </div>
 
