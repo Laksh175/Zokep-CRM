@@ -9,10 +9,11 @@ export const AuthProvider = ({ children }) => {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user profile on mount if token exists
+  // Load user profile on initial app load if token exists in localStorage
   useEffect(() => {
     const initAuth = async () => {
-      if (token) {
+      const savedToken = localStorage.getItem('zokep_token');
+      if (savedToken) {
         try {
           const res = await api.get('/auth/me');
           if (res.success) {
@@ -28,7 +29,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-  }, [token]);
+  }, []);
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });

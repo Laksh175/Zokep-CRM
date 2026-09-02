@@ -110,5 +110,12 @@ const leadSchema = new mongoose.Schema(
   }
 );
 
+// High Performance Compound Indexes for Multi-Tenant CRM
+leadSchema.index({ tenantId: 1, createdAt: -1 });
+leadSchema.index({ tenantId: 1, statusId: 1 });
+leadSchema.index({ tenantId: 1, assignedTo: 1 });
+leadSchema.index({ tenantId: 1, isConverted: 1 });
+leadSchema.index({ tenantId: 1, nextFollowupDate: 1 });
+
 const Lead = mongoose.model('Lead', leadSchema);
 export default Lead;

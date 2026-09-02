@@ -10,53 +10,51 @@ export const getStaffDashboard = async (req, res) => {
     const tenantId = req.tenantId;
     const staffId = req.user._id;
 
-    const myTotalLeads = await Lead.countDocuments({ tenantId, assignedTo: staffId });
-    const myConvertedLeads = await Lead.countDocuments({ tenantId, assignedTo: staffId, isConverted: true });
-
-    // Today's Follow-ups
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
-    const todayFollowups = await Lead.find({
-      tenantId,
-      assignedTo: staffId,
-      nextFollowupDate: { $gte: startOfToday, $lte: endOfToday },
-      isConverted: false,
-    })
-      .populate('statusId', 'name color')
-      .sort({ nextFollowupDate: 1 });
+    const [myLeads, statuses, recentActivities] = await Promise.all([
+      Lead.find({ tenantId, assignedTo: staffId }).populate('statusId', 'name color').lean(),
+      LeadStatus.find({ tenantId }).sort({ order: 1 }).lean(),
+      ActivityLog.find({ tenantId, performedBy: staffId })
+        .populate('leadId', 'name phone company')
+        .sort({ createdAt: -1 })
+        .limit(10)
+        .lean(),
+    ]);
 
-    // Overdue Follow-ups
-    const overdueFollowups = await Lead.find({
-      tenantId,
-      assignedTo: staffId,
-      nextFollowupDate: { $lt: startOfToday },
-      isConverted: false,
-    })
-      .populate('statusId', 'name color')
-      .sort({ nextFollowupDate: 1 });
+    const myTotalLeads = myLeads.length;
+    let myConvertedLeads = 0;
+    const todayFollowups = [];
+    const overdueFollowups = [];
+    const statusMap = {};
 
-    // Status breakdown
-    const statuses = await LeadStatus.find({ tenantId }).sort({ order: 1 });
-    const statusCounts = await Promise.all(
-      statuses.map(async (st) => {
-        const count = await Lead.countDocuments({ tenantId, assignedTo: staffId, statusId: st._id });
-        return {
-          id: st._id,
-          name: st.name,
-          color: st.color,
-          count,
-        };
-      })
-    );
+    myLeads.forEach((lead) => {
+      if (lead.isConverted) myConvertedLeads++;
 
-    // Recent activity log by this staff
-    const recentActivities = await ActivityLog.find({ tenantId, performedBy: staffId })
-      .populate('leadId', 'name phone company')
-      .sort({ createdAt: -1 })
-      .limit(10);
+      if (lead.statusId) {
+        const sKey = String(lead.statusId._id || lead.statusId);
+        statusMap[sKey] = (statusMap[sKey] || 0) + 1;
+      }
+
+      if (!lead.isConverted && lead.nextFollowupDate) {
+        const fDate = new Date(lead.nextFollowupDate);
+        if (fDate >= startOfToday && fDate <= endOfToday) {
+          todayFollowups.push(lead);
+        } else if (fDate < startOfToday) {
+          overdueFollowups.push(lead);
+        }
+      }
+    });
+
+    const statusCounts = statuses.map((st) => ({
+      id: st._id,
+      name: st.name,
+      color: st.color,
+      count: statusMap[String(st._id)] || 0,
+    }));
 
     return res.json({
       success: true,

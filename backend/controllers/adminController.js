@@ -13,72 +13,85 @@ export const getAdminDashboard = async (req, res) => {
   try {
     const tenantId = req.tenantId;
 
-    const totalLeads = await Lead.countDocuments({ tenantId });
-    const convertedLeads = await Lead.countDocuments({ tenantId, isConverted: true });
-    const unassignedLeads = await Lead.countDocuments({ tenantId, assignedTo: null });
-    const totalStaff = await User.countDocuments({ tenantId, role: 'staff' });
-
-    // Financial pipeline values
-    const allLeads = await Lead.find({ tenantId });
-    const totalPipelineValue = allLeads.reduce((sum, l) => sum + (l.dealValue || 0), 0);
-    const wonRevenue = allLeads
-      .filter((l) => l.isConverted)
-      .reduce((sum, l) => sum + (l.convertedDealAmount || l.dealValue || 0), 0);
-
-    // Status breakdown with colors
-    const statuses = await LeadStatus.find({ tenantId }).sort({ order: 1 });
-    const statusCounts = await Promise.all(
-      statuses.map(async (st) => {
-        const count = await Lead.countDocuments({ tenantId, statusId: st._id });
-        return {
-          id: st._id,
-          name: st.name,
-          color: st.color,
-          count,
-        };
-      })
-    );
-
-    // Staff Leaderboard
-    const staffMembers = await User.find({ tenantId, role: 'staff' });
-    const staffPerformance = await Promise.all(
-      staffMembers.map(async (staff) => {
-        const assigned = await Lead.countDocuments({ tenantId, assignedTo: staff._id });
-        const converted = await Lead.countDocuments({ tenantId, assignedTo: staff._id, isConverted: true });
-        const followupsCount = await ActivityLog.countDocuments({ tenantId, performedBy: staff._id });
-        const rate = assigned > 0 ? ((converted / assigned) * 100).toFixed(1) : 0;
-        return {
-          id: staff._id,
-          name: staff.name,
-          email: staff.email,
-          phone: staff.phone,
-          isActive: staff.isActive,
-          assignedLeads: assigned,
-          convertedLeads: converted,
-          followupsCount,
-          conversionRate: rate,
-        };
-      })
-    );
-
-    // Upcoming followups (next 7 days)
     const now = new Date();
     const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-    const upcomingFollowups = await Lead.find({
-      tenantId,
-      nextFollowupDate: { $gte: now, $lte: nextWeek },
-      isConverted: false,
-    })
-      .populate('assignedTo', 'name email')
-      .populate('statusId', 'name color')
-      .sort({ nextFollowupDate: 1 })
-      .limit(10);
 
-    // Lead Sources breakdown
+    // Fetch all collections in parallel in a single database round-trip
+    const [allLeads, statuses, staffMembers, upcomingFollowups] = await Promise.all([
+      Lead.find({ tenantId }).lean(),
+      LeadStatus.find({ tenantId }).sort({ order: 1 }).lean(),
+      User.find({ tenantId, role: 'staff' }).select('name email phone isActive _id').lean(),
+      Lead.find({
+        tenantId,
+        nextFollowupDate: { $gte: now, $lte: nextWeek },
+        isConverted: false,
+      })
+        .populate('assignedTo', 'name email')
+        .populate('statusId', 'name color')
+        .sort({ nextFollowupDate: 1 })
+        .limit(10)
+        .lean(),
+    ]);
+
+    const totalLeads = allLeads.length;
+    let convertedLeads = 0;
+    let unassignedLeads = 0;
+    let totalPipelineValue = 0;
+    let wonRevenue = 0;
+
     const sourceMap = {};
+    const statusCountMap = {};
+    const staffLeadMap = {};
+    const staffConvertedMap = {};
+
     allLeads.forEach((l) => {
+      if (l.isConverted) {
+        convertedLeads++;
+        wonRevenue += (l.convertedDealAmount || l.dealValue || 0);
+      }
+      if (!l.assignedTo) {
+        unassignedLeads++;
+      } else {
+        const staffKey = String(l.assignedTo);
+        staffLeadMap[staffKey] = (staffLeadMap[staffKey] || 0) + 1;
+        if (l.isConverted) {
+          staffConvertedMap[staffKey] = (staffConvertedMap[staffKey] || 0) + 1;
+        }
+      }
+
+      totalPipelineValue += (l.dealValue || 0);
+
       const src = l.source || 'manual';
       sourceMap[src] = (sourceMap[src] || 0) + 1;
+
+      if (l.statusId) {
+        const sKey = String(l.statusId);
+        statusCountMap[sKey] = (statusCountMap[sKey] || 0) + 1;
+      }
+    });
+
+    const statusCounts = statuses.map((st) => ({
+      id: st._id,
+      name: st.name,
+      color: st.color,
+      count: statusCountMap[String(st._id)] || 0,
+    }));
+
+    const staffPerformance = staffMembers.map((staff) => {
+      const assigned = staffLeadMap[String(staff._id)] || 0;
+      const converted = staffConvertedMap[String(staff._id)] || 0;
+      const rate = assigned > 0 ? ((converted / assigned) * 100).toFixed(1) : 0;
+      return {
+        id: staff._id,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone,
+        isActive: staff.isActive,
+        assignedLeads: assigned,
+        convertedLeads: converted,
+        followupsCount: 0,
+        conversionRate: rate,
+      };
     });
 
     // 14-Day Time-Series Lead Trend for Graph
@@ -92,16 +105,17 @@ export const getAdminDashboard = async (req, res) => {
       const dayLabel = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
       const fullDateLabel = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 
-      const createdCount = allLeads.filter((l) => {
-        const cDate = new Date(l.createdAt);
-        return cDate >= startOfDay && cDate <= endOfDay;
-      }).length;
+      let createdCount = 0;
+      let convertedCount = 0;
 
-      const convertedCount = allLeads.filter((l) => {
-        if (!l.convertedAt) return false;
-        const cvDate = new Date(l.convertedAt);
-        return cvDate >= startOfDay && cvDate <= endOfDay;
-      }).length;
+      allLeads.forEach((l) => {
+        const cDate = new Date(l.createdAt);
+        if (cDate >= startOfDay && cDate <= endOfDay) createdCount++;
+        if (l.convertedAt) {
+          const cvDate = new Date(l.convertedAt);
+          if (cvDate >= startOfDay && cvDate <= endOfDay) convertedCount++;
+        }
+      });
 
       trendData.push({
         date: dayLabel,
@@ -117,7 +131,7 @@ export const getAdminDashboard = async (req, res) => {
         totalLeads,
         convertedLeads,
         unassignedLeads,
-        totalStaff,
+        totalStaff: staffMembers.length,
         totalPipelineValue,
         wonRevenue,
         conversionRate: totalLeads > 0 ? ((convertedLeads / totalLeads) * 100).toFixed(1) : 0,
