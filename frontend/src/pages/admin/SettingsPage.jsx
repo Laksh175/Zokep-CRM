@@ -258,7 +258,8 @@ export const SettingsPage = () => {
   };
 
   const publicFormUrl = `${window.location.origin}/f/${user?.tenantId || user?.id}`;
-  const iframeEmbedCode = `<iframe src="${publicFormUrl}" width="100%" height="650" frameborder="0" style="border-radius: 12px; border: 1px solid #e2e8f0;"></iframe>`;
+  const embedCode = `<iframe src="${publicFormUrl}" width="100%" height="650" frameborder="0" style="border-radius: 12px; border: 1px solid #e2e8f0;"></iframe>`;
+  const iframeEmbedCode = embedCode;
 
   const copyToClipboard = (text, label) => {
     navigator.clipboard.writeText(text);
