@@ -1,0 +1,21 @@
+{
+  "name": "zokep-crm",
+  "version": "1.0.0",
+  "description": "Zokep CRM - SaaS Multi-Tenant Lead Management Platform (MERN Stack)",
+  "scripts": {
+    "backend": "cd backend && npm run dev",
+    "frontend": "cd frontend && npm run dev",
+    "seed": "cd backend && npm run seed"
+  },
+  "keywords": [
+    "saas",
+    "crm",
+    "lead-management",
+    "multi-tenant",
+    "razorpay",
+    "nodemailer",
+    "mern"
+  ],
+  "author": "Zokep CRM",
+  "license": "ISC"
+}
