@@ -307,6 +307,22 @@ export const LeadManagementPage = () => {
     }
   };
 
+  const handleQuickStatusChange = async (leadId, newStatusId) => {
+    try {
+      const res = await api.put(`/leads/${leadId}/status`, { statusId: newStatusId });
+      if (res.success) {
+        success(res.message || 'Status updated successfully');
+        fetchLeads();
+        if (activeLead && activeLead._id === leadId) {
+          setActiveLead(res.data);
+          setNewStatusId(newStatusId);
+        }
+      }
+    } catch (err) {
+      error(err.message || 'Failed to update status');
+    }
+  };
+
   const handleExportCSV = async () => {
     try {
       const blob = await api.get('/leads/export-csv');
@@ -511,9 +527,28 @@ export const LeadManagementPage = () => {
                           ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
                         </td>
                         <td>
-                          <Badge color={lead.statusId?.color || '#3b82f6'}>
-                            {lead.statusId?.name || 'New'}
-                          </Badge>
+                          <select
+                            className="form-select"
+                            style={{
+                              fontSize: '12px',
+                              padding: '4px 8px',
+                              height: 'auto',
+                              minWidth: '125px',
+                              fontWeight: 600,
+                              background: 'var(--bg-surface)',
+                              borderLeft: `4px solid ${lead.statusId?.color || '#3b82f6'}`,
+                              borderRadius: '6px',
+                            }}
+                            value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
+                            onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
+                            title="Change Lead Pipeline Status"
+                          >
+                            {statuses.map((st) => (
+                              <option key={st._id || st.id} value={st._id || st.id}>
+                                {st.name}
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         <td>
                           <select
@@ -671,13 +706,28 @@ export const LeadManagementPage = () => {
                         <p style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                           {lead.company || lead.phone}
                         </p>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
                           <select
                             className="form-select"
-                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '120px' }}
+                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '110px' }}
+                            value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
+                            title="Move Stage"
+                          >
+                            {statuses.map((st) => (
+                              <option key={st._id || st.id} value={st._id || st.id}>
+                                {st.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            className="form-select"
+                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '110px' }}
                             value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
                             onClick={(e) => e.stopPropagation()}
                             onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                            title="Assign to staff"
                           >
                             <option value="">-- Unassigned --</option>
                             {staffList.map((s) => (

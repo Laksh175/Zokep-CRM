@@ -7,6 +7,7 @@ import {
   getLeadById,
   createLead,
   updateLead,
+  updateLeadStatusDirectly,
   addFollowupAndUpdateStatus,
   convertLeadToCustomer,
   reassignLead,
@@ -57,6 +58,7 @@ router.get('/:id', authorize('admin', 'staff'), getLeadById);
 // Create lead requires active subscription
 router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
 router.put('/:id', authorize('admin', 'staff'), updateLead);
+router.put('/:id/status', authorize('admin', 'staff'), updateLeadStatusDirectly);
 router.post('/:id/followup', authorize('admin', 'staff'), addFollowupAndUpdateStatus);
 router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
 

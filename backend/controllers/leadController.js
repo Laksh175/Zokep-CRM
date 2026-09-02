@@ -237,6 +237,9 @@ export const updateLead = async (req, res) => {
       tags,
       customFieldsData,
       assignedTo,
+      statusId,
+      nextFollowupDate,
+      notes,
     } = req.body;
 
     const lead = await Lead.findOne({ _id: id, tenantId });
@@ -253,11 +256,34 @@ export const updateLead = async (req, res) => {
     if (dealValue !== undefined) lead.dealValue = Number(dealValue);
     if (source) lead.source = source;
     if (priority) lead.priority = priority;
+    if (notes !== undefined) lead.notes = notes;
+    if (nextFollowupDate !== undefined) {
+      lead.nextFollowupDate = nextFollowupDate ? new Date(nextFollowupDate) : null;
+    }
     if (tags !== undefined) {
       lead.tags = Array.isArray(tags) ? tags : tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
     if (customFieldsData) {
       lead.customFieldsData = { ...lead.customFieldsData, ...customFieldsData };
+    }
+
+    // Status change
+    if (statusId && String(lead.statusId) !== String(statusId)) {
+      lead.statusId = statusId;
+      const newStatusDoc = await LeadStatus.findById(statusId);
+      if (newStatusDoc?.isConvertedState) {
+        lead.isConverted = true;
+        lead.convertedAt = new Date();
+        lead.convertedDealAmount = lead.dealValue || 0;
+      }
+      await ActivityLog.create({
+        tenantId,
+        leadId: lead._id,
+        performedBy: req.user._id,
+        type: 'status_change',
+        title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
+        note: `Updated during lead edit`,
+      });
     }
 
     // Only Admin can reassign
@@ -281,10 +307,68 @@ export const updateLead = async (req, res) => {
     await lead.save();
 
     const updated = await Lead.findById(lead._id)
-      .populate('statusId', 'name color isConvertedState')
+      .populate('statusId', 'name color isConvertedState isLostState')
       .populate('assignedTo', 'name email');
 
     return res.json({ success: true, message: 'Lead updated successfully', data: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Direct 1-Click Update Lead Status (Table, Kanban, Modal)
+// @route   PUT /api/leads/:id/status
+// @access  Private (Admin & Staff)
+export const updateLeadStatusDirectly = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const { statusId } = req.body;
+
+    if (!statusId) {
+      return res.status(400).json({ success: false, message: 'statusId is required' });
+    }
+
+    const lead = await Lead.findOne({ _id: id, tenantId });
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    if (req.user.role === 'staff' && String(lead.assignedTo) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to modify this lead' });
+    }
+
+    const newStatusDoc = await LeadStatus.findById(statusId);
+    lead.statusId = statusId;
+
+    if (newStatusDoc?.isConvertedState) {
+      lead.isConverted = true;
+      lead.convertedAt = new Date();
+      lead.convertedDealAmount = lead.dealValue || 0;
+    } else {
+      // If moved back to an active non-converted state
+      lead.isConverted = false;
+    }
+
+    lead.lastContactedAt = new Date();
+    await lead.save();
+
+    await ActivityLog.create({
+      tenantId,
+      leadId: lead._id,
+      performedBy: req.user._id,
+      type: 'status_change',
+      title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
+      note: `Status updated via pipeline interface`,
+    });
+
+    const populated = await Lead.findById(lead._id)
+      .populate('statusId', 'name color isConvertedState isLostState')
+      .populate('assignedTo', 'name email');
+
+    return res.json({
+      success: true,
+      message: `Status updated to ${newStatusDoc?.name || 'Updated'}`,
+      data: populated,
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }

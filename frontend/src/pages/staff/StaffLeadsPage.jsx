@@ -214,6 +214,22 @@ export const StaffLeadsPage = () => {
     }
   };
 
+  const handleQuickStatusChange = async (leadId, newStatusId) => {
+    try {
+      const res = await api.put(`/leads/${leadId}/status`, { statusId: newStatusId });
+      if (res.success) {
+        success(res.message || 'Status updated successfully');
+        fetchMyLeads();
+        if (activeLead && activeLead._id === leadId) {
+          setActiveLead(res.data);
+          setNewStatusId(newStatusId);
+        }
+      }
+    } catch (err) {
+      error(err.message || 'Failed to update status');
+    }
+  };
+
   return (
     <div>
       <Header
@@ -326,9 +342,28 @@ export const StaffLeadsPage = () => {
                         ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
                       </td>
                       <td>
-                        <Badge color={lead.statusId?.color || '#3b82f6'}>
-                          {lead.statusId?.name || 'New'}
-                        </Badge>
+                        <select
+                          className="form-select"
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 8px',
+                            height: 'auto',
+                            minWidth: '125px',
+                            fontWeight: 600,
+                            background: 'var(--bg-surface)',
+                            borderLeft: `4px solid ${lead.statusId?.color || '#3b82f6'}`,
+                            borderRadius: '6px',
+                          }}
+                          value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
+                          onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
+                          title="Change Lead Pipeline Status"
+                        >
+                          {statuses.map((st) => (
+                            <option key={st._id || st.id} value={st._id || st.id}>
+                              {st.name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td>
                         {lead.nextFollowupDate ? (
