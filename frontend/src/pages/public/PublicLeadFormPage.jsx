@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Layers, Send, CheckCircle2, AlertCircle, Building2, Sparkles, Sun, Moon } from 'lucide-react';
+import { Layers, Send, CheckCircle2, AlertCircle, Building2, Sparkles } from 'lucide-react';
 import api from '../../services/api';
-import { useTheme } from '../../context/ThemeContext';
 import DynamicFieldRenderer from '../../components/DynamicFieldRenderer';
 import confetti from 'canvas-confetti';
 
 export const PublicLeadFormPage = () => {
   const { tenantId } = useParams();
-  const { toggleTheme, isDark } = useTheme();
 
   const [formConfig, setFormConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -96,18 +94,6 @@ export const PublicLeadFormPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-main)', color: 'var(--text-primary)', padding: '40px 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-      {/* Top Right Theme Toggle */}
-      <div style={{ position: 'absolute', top: 20, right: 24 }}>
-        <button
-          onClick={toggleTheme}
-          className="btn btn-secondary btn-sm"
-          style={{ width: 38, height: 38, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {isDark ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} color="#6366f1" />}
-        </button>
-      </div>
-
       <div style={{ width: '100%', maxWidth: '600px' }}>
         {/* Brand Banner */}
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>

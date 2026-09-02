@@ -1,12 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Layers, ArrowRight, LogIn, LayoutDashboard, Sun, Moon } from 'lucide-react';
+import { Layers, ArrowRight, LogIn, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 
 export const Navbar = () => {
   const { user, isAuthenticated } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const getDashboardPath = () => {
@@ -49,14 +47,6 @@ export const Navbar = () => {
 
         {/* CTA Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={toggleTheme}
-            className="btn btn-secondary"
-            style={{ width: 40, height: 40, padding: 0, justifyContent: 'center' }}
-            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDark ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} color="#6366f1" />}
-          </button>
 
           {isAuthenticated ? (
             <button

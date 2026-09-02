@@ -10,7 +10,21 @@ import {
   Clock,
   ExternalLink,
   Plus,
+  BarChart2,
+  PieChart as PieIcon,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from 'recharts';
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
@@ -18,6 +32,37 @@ import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
 import { Link } from 'react-router-dom';
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const fullDate = payload[0]?.payload?.fullDate || label;
+    return (
+      <div
+        style={{
+          background: '#ffffff',
+          padding: '12px 16px',
+          borderRadius: '10px',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 10px 15px -3px rgba(0, 34, 68, 0.08)',
+          fontSize: '13px',
+        }}
+      >
+        <p style={{ fontWeight: 700, marginBottom: '6px', color: '#002244' }}>
+          📅 {fullDate}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {payload.map((entry, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <span style={{ color: entry.color, fontWeight: 600 }}>{entry.name}:</span>
+              <strong style={{ color: '#002244' }}>{entry.value}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const AdminDashboard = () => {
   const { error } = useToast();
@@ -90,6 +135,137 @@ export const AdminDashboard = () => {
             icon={Users}
             color="#f59e0b"
           />
+        </div>
+
+        {/* Lead Graph & Analytics Section */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+          {/* Chart 1: 14-Day Lead Trends & Deals Won */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Lead Activity & Conversion Trend</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Daily comparison of inquiries captured vs. deals won over the last 14 days
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="badge" style={{ backgroundColor: '#f0f6fc', color: '#003865', border: '1px solid #badcf5' }}>
+                  ● Inquiries
+                </span>
+                <span className="badge" style={{ backgroundColor: '#e8f8ef', color: '#00a651', border: '1px solid #a7f3d0' }}>
+                  ● Won Deals
+                </span>
+              </div>
+            </div>
+
+            <div style={{ width: '100%', height: 280, marginTop: 'auto' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={data?.leadTrends || []}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#003865" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#003865" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="colorConverted" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00a651" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#00a651" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={{ stroke: '#cbd5e1' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="newLeads"
+                    name="New Leads"
+                    stroke="#003865"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorLeads)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="converted"
+                    name="Won Customers"
+                    stroke="#00a651"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorConverted)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Chart 2: Lead Acquisition by Channel / Source */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Leads by Acquisition Channel</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Distribution of leads across public forms, WhatsApp, and manual sources
+                </p>
+              </div>
+              <BarChart2 size={18} color="var(--primary-500)" />
+            </div>
+
+            <div style={{ width: '100%', height: 280, marginTop: 'auto' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data?.sourceBreakdown || []}
+                  margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="source"
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={{ stroke: '#cbd5e1' }}
+                    tickLine={false}
+                    tickFormatter={(val) => val.charAt(0).toUpperCase() + val.slice(1)}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0, 56, 101, 0.04)' }}
+                    formatter={(val) => [`${val} Leads`, 'Total Leads']}
+                    contentStyle={{
+                      background: '#ffffff',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      boxShadow: '0 10px 15px -3px rgba(0, 34, 68, 0.08)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    name="Leads"
+                    fill="#003865"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={48}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Dynamic Status Breakdown with Configured Colors */}

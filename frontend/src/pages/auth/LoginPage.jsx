@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Layers, LogIn, Lock, Mail, ShieldAlert, Sparkles, ArrowRight, Sun, Moon } from 'lucide-react';
+import { Layers, LogIn, Lock, Mail, ShieldAlert, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
-import { useTheme } from '../../context/ThemeContext';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { success, error } = useToast();
-  const { toggleTheme, isDark } = useTheme();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -60,17 +58,6 @@ export const LoginPage = () => {
         position: 'relative',
       }}
     >
-      {/* Top Right Theme Toggle */}
-      <div style={{ position: 'absolute', top: 20, right: 24 }}>
-        <button
-          onClick={toggleTheme}
-          className="btn btn-secondary btn-sm"
-          style={{ width: 38, height: 38, padding: 0, justifyContent: 'center' }}
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {isDark ? <Sun size={17} color="#f59e0b" /> : <Moon size={17} color="#6366f1" />}
-        </button>
-      </div>
       {/* Background Glow */}
       <div
         style={{

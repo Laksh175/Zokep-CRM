@@ -14,15 +14,11 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
-  Sun,
-  Moon,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
 
 export const Sidebar = () => {
   const { user, subscription, logout, isSuperAdmin, isAdmin, isStaff } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -237,20 +233,12 @@ export const Sidebar = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button
-            onClick={toggleTheme}
-            className="btn-icon btn-secondary"
-            title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-            style={{ width: 32, height: 32, flexShrink: 0 }}
-          >
-            {isDark ? <Sun size={15} color="#f59e0b" /> : <Moon size={15} color="#6366f1" />}
-          </button>
-          <button
             onClick={handleLogout}
             className="btn-icon btn-secondary"
             title="Sign Out"
             style={{ width: 32, height: 32, flexShrink: 0 }}
           >
-            <LogOut size={15} color="#f43f5e" />
+            <LogOut size={15} color="#e11d48" />
           </button>
         </div>
       </div>

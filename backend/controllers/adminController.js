@@ -81,6 +81,36 @@ export const getAdminDashboard = async (req, res) => {
       sourceMap[src] = (sourceMap[src] || 0) + 1;
     });
 
+    // 14-Day Time-Series Lead Trend for Graph
+    const trendData = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+      const dayLabel = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const fullDateLabel = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+
+      const createdCount = allLeads.filter((l) => {
+        const cDate = new Date(l.createdAt);
+        return cDate >= startOfDay && cDate <= endOfDay;
+      }).length;
+
+      const convertedCount = allLeads.filter((l) => {
+        if (!l.convertedAt) return false;
+        const cvDate = new Date(l.convertedAt);
+        return cvDate >= startOfDay && cvDate <= endOfDay;
+      }).length;
+
+      trendData.push({
+        date: dayLabel,
+        fullDate: fullDateLabel,
+        newLeads: createdCount,
+        converted: convertedCount,
+      });
+    }
+
     return res.json({
       success: true,
       data: {
@@ -95,6 +125,7 @@ export const getAdminDashboard = async (req, res) => {
         staffPerformance,
         upcomingFollowups,
         sourceBreakdown: Object.entries(sourceMap).map(([source, count]) => ({ source, count })),
+        leadTrends: trendData,
       },
     });
   } catch (error) {

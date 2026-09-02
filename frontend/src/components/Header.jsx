@@ -1,12 +1,10 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useTheme } from '../context/ThemeContext';
-import { ExternalLink, Crown, ShieldAlert, Sparkles, Sun, Moon } from 'lucide-react';
+import { ExternalLink, Crown, ShieldAlert, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Header = ({ title, subtitle, actions }) => {
   const { user, subscription, isAdmin } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
 
   return (
     <header
@@ -27,15 +25,6 @@ export const Header = ({ title, subtitle, actions }) => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-        {/* Theme Mode Switcher */}
-        <button
-          onClick={toggleTheme}
-          className="btn btn-secondary btn-sm"
-          style={{ width: 36, height: 36, padding: 0, justifyContent: 'center' }}
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          {isDark ? <Sun size={16} color="#f59e0b" /> : <Moon size={16} color="#6366f1" />}
-        </button>
 
         {/* Public Form Quick Link for Admin */}
         {isAdmin && user?.tenantId && (

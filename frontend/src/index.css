@@ -1,6 +1,6 @@
 /* ==========================================================================
-   ZOKEP CRM Design System
-   Corporate Light/Dark Theme based on ZOKEP Logo (Navy Blue, Growth Green & Crisp White)
+   ZOKEP CRM Design System - Executive White Theme
+   Corporate Theme based on ZOKEP Logo (Navy Blue #003865, Growth Green #00A651 & Pure White #FFFFFF)
    Tagline: Capture. Convert. Close.
    ========================================================================== */
 
@@ -16,25 +16,25 @@
   --primary-700: #002442;
   --primary-800: #001b32;
   --primary-900: #001222;
-  --primary-glow: rgba(0, 56, 101, 0.18);
+  --primary-glow: rgba(0, 56, 101, 0.16);
 
   /* Growth Green (Extracted from ZOKEP Arrow & Conversion Ring) */
   --accent-green: #00a651;
   --accent-green-hover: #008f45;
   --accent-green-light: #e8f8ef;
-  --accent-green-glow: rgba(0, 166, 81, 0.2);
+  --accent-green-glow: rgba(0, 166, 81, 0.18);
   --accent-emerald: #00a651;
 
   --accent-cyan: #0284c7;
   --accent-amber: #d97706;
   --accent-rose: #e11d48;
 
-  /* Default Clean White & Executive Slate Surface Tokens */
+  /* Pure White & Clean Slate Surface Tokens (Light Theme Only) */
   --bg-main: #f8fafc;
   --bg-surface: #ffffff;
   --bg-surface-elevated: #f1f5f9;
   --bg-card: #ffffff;
-  --bg-glass: rgba(255, 255, 255, 0.94);
+  --bg-glass: rgba(255, 255, 255, 0.96);
   --bg-input: #ffffff;
   
   /* Borders & Dividers */
@@ -42,18 +42,18 @@
   --border-medium: #cbd5e1;
   --border-focus: #003865;
 
-  /* Typography Colors */
-  --text-primary: #002244; /* High-contrast Deep Navy for crisp readability */
+  /* High-Contrast Typography */
+  --text-primary: #002244; /* High-contrast Deep Navy for maximum clarity */
   --text-secondary: #475569;
   --text-muted: #64748b;
   --text-inverse: #ffffff;
 
-  /* Shadows & Elevation */
+  /* Clean Shadows & Elevation */
   --shadow-sm: 0 1px 2px 0 rgba(0, 34, 68, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 34, 68, 0.07), 0 2px 4px -2px rgba(0, 34, 68, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 34, 68, 0.07), 0 2px 4px -2px rgba(0, 34, 68, 0.04);
   --shadow-lg: 0 10px 15px -3px rgba(0, 34, 68, 0.08), 0 4px 6px -4px rgba(0, 34, 68, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 34, 68, 0.1), 0 8px 10px -6px rgba(0, 34, 68, 0.05);
-  --shadow-glow: 0 0 25px rgba(0, 56, 101, 0.15);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 34, 68, 0.09), 0 8px 10px -6px rgba(0, 34, 68, 0.04);
+  --shadow-glow: 0 0 25px rgba(0, 56, 101, 0.12);
 
   --radius-sm: 6px;
   --radius-md: 10px;
@@ -63,31 +63,6 @@
 
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Dark Theme (Themed with Deep Navy & Growth Green Accents) */
-[data-theme='dark'] {
-  --bg-main: #06111e;
-  --bg-surface: #0b1a2e;
-  --bg-surface-elevated: #11253f;
-  --bg-card: rgba(11, 26, 46, 0.9);
-  --bg-glass: rgba(11, 26, 46, 0.85);
-  --bg-input: #0e2038;
-  
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.14);
-  --border-focus: #00a651;
-
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --text-inverse: #002244;
-
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6);
-  --shadow-glow: 0 0 25px rgba(0, 166, 81, 0.25);
 }
 
 /* Base Reset & Typography */
@@ -123,11 +98,9 @@ a:hover {
   color: var(--accent-green);
 }
 
-/* Glassmorphism & Surface Backgrounds */
+/* Clean Panels & Backgrounds */
 .glass-panel {
   background: var(--bg-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
@@ -144,12 +117,6 @@ a:hover {
 /* Gradients with ZOKEP Navy & Green */
 .gradient-text {
   background: linear-gradient(135deg, #003865 0%, #00a651 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-[data-theme='dark'] .gradient-text {
-  background: linear-gradient(135deg, #7cc2ee 0%, #00a651 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -197,7 +164,7 @@ a:hover {
 .btn-primary:hover {
   background: linear-gradient(135deg, #004b87 0%, #003366 100%);
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(0, 56, 101, 0.3);
+  box-shadow: 0 6px 18px rgba(0, 56, 101, 0.28);
 }
 .btn-primary:active {
   transform: translateY(0);
@@ -358,10 +325,6 @@ a:hover {
   background-color: rgba(0, 56, 101, 0.025);
 }
 
-[data-theme='dark'] .crm-table tbody tr:hover {
-  background-color: rgba(255, 255, 255, 0.03);
-}
-
 /* Badges */
 .badge {
   display: inline-flex;
@@ -437,8 +400,8 @@ a:hover {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 34, 68, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 34, 68, 0.5);
+  backdrop-filter: blur(5px);
   display: flex;
   align-items: center;
   justify-content: center;
