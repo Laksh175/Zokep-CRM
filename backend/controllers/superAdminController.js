@@ -60,6 +60,53 @@ export const getPlatformAnalytics = async (req, res) => {
       .sort({ endDate: -1 })
       .limit(20);
 
+    // 14-Day Revenue Time-Series Trend for Graph
+    const revenueTrends = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+      const dayLabel = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const fullDateLabel = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
+
+      let dayRev = 0;
+      let newSubCount = 0;
+
+      allSubscriptions.forEach((s) => {
+        const sDate = new Date(s.createdAt);
+        if (sDate >= startOfDay && sDate <= endOfDay) {
+          dayRev += (s.amountPaid || 0);
+          newSubCount++;
+        }
+      });
+
+      revenueTrends.push({
+        date: dayLabel,
+        fullDate: fullDateLabel,
+        revenue: dayRev,
+        subscriptions: newSubCount,
+      });
+    }
+
+    // Plan Distribution Breakdown
+    const planMap = {};
+    recentSubscriptions.forEach((sub) => {
+      const planName = sub.planId?.name || 'SaaS Standard';
+      if (!planMap[planName]) {
+        planMap[planName] = { count: 0, revenue: 0 };
+      }
+      planMap[planName].count++;
+      planMap[planName].revenue += (sub.amountPaid || 0);
+    });
+
+    const planDistribution = Object.entries(planMap).map(([name, stat]) => ({
+      name,
+      count: stat.count,
+      revenue: stat.revenue,
+    }));
+
     return res.json({
       success: true,
       data: {
@@ -76,6 +123,8 @@ export const getPlatformAnalytics = async (req, res) => {
         expiringSoonSubscriptions,
         recentSubscriptions,
         expiredTenantSubs,
+        revenueTrends,
+        planDistribution,
       },
     });
   } catch (error) {

@@ -11,13 +11,58 @@ import {
   Calendar,
   Sparkles,
   ArrowUpRight,
+  BarChart2,
 } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+} from 'recharts';
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
+
+const CustomRevenueTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const fullDate = payload[0]?.payload?.fullDate || label;
+    return (
+      <div
+        style={{
+          background: '#ffffff',
+          padding: '12px 16px',
+          borderRadius: '10px',
+          border: '1px solid #cbd5e1',
+          boxShadow: '0 10px 15px -3px rgba(0, 34, 68, 0.08)',
+          fontSize: '13px',
+        }}
+      >
+        <p style={{ fontWeight: 700, marginBottom: '6px', color: '#002244' }}>
+          📅 {fullDate}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {payload.map((entry, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+              <span style={{ color: entry.color, fontWeight: 600 }}>{entry.name}:</span>
+              <strong style={{ color: '#002244' }}>
+                {entry.dataKey === 'revenue' ? `₹${entry.value.toLocaleString('en-IN')}` : entry.value}
+              </strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
 
 export const SuperAdminDashboard = () => {
   const { success, error } = useToast();
@@ -97,6 +142,139 @@ export const SuperAdminDashboard = () => {
             icon={AlertTriangle}
             color="#f43f5e"
           />
+        </div>
+
+        {/* Platform Revenue & Growth Graph Section */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+          {/* Revenue Growth Trend Area Chart */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>SaaS Revenue & Subscription Growth</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Daily recurring revenue timeline and new business subscriptions over last 14 days
+                </p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span className="badge" style={{ backgroundColor: '#e8f8ef', color: '#00a651', border: '1px solid #a7f3d0' }}>
+                  ● Revenue (₹)
+                </span>
+                <span className="badge" style={{ backgroundColor: '#f0f6fc', color: '#003865', border: '1px solid #badcf5' }}>
+                  ● Subscriptions
+                </span>
+              </div>
+            </div>
+
+            <div style={{ width: '100%', height: 280, marginTop: 'auto' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={metrics?.revenueTrends || []}
+                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#00a651" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#00a651" stopOpacity={0.0} />
+                    </linearGradient>
+                    <linearGradient id="colorSubs" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#003865" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#003865" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="date"
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={{ stroke: '#cbd5e1' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  />
+                  <Tooltip content={<CustomRevenueTooltip />} />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    name="Daily Revenue"
+                    stroke="#00a651"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorRevenue)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="subscriptions"
+                    name="New Subscriptions"
+                    stroke="#003865"
+                    strokeWidth={2.5}
+                    fillOpacity={1}
+                    fill="url(#colorSubs)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Revenue by Subscription Plan Bar Chart */}
+          <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>Revenue by Subscription Plan</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Platform earnings distribution across active subscription tiers
+                </p>
+              </div>
+              <BarChart2 size={18} color="var(--primary-500)" />
+            </div>
+
+            <div style={{ width: '100%', height: 280, marginTop: 'auto' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={metrics?.planDistribution || []}
+                  margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={{ stroke: '#cbd5e1' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                    tickFormatter={(val) => `₹${val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val}`}
+                  />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(0, 56, 101, 0.04)' }}
+                    formatter={(val, name) => [
+                      name === 'revenue' ? `₹${Number(val).toLocaleString('en-IN')}` : `${val} Tenants`,
+                      name === 'revenue' ? 'Plan Revenue' : 'Active Subscribers',
+                    ]}
+                    contentStyle={{
+                      background: '#ffffff',
+                      borderRadius: '10px',
+                      border: '1px solid #cbd5e1',
+                      boxShadow: '0 10px 15px -3px rgba(0, 34, 68, 0.08)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                    }}
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    name="revenue"
+                    fill="#00a651"
+                    radius={[6, 6, 0, 0]}
+                    maxBarSize={48}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
 
         {/* Expired Subscriptions Alerts Box */}

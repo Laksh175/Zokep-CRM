@@ -112,28 +112,35 @@ export const AdminDashboard = () => {
             value={data?.totalLeads || 0}
             subtitle={`${data?.unassignedLeads || 0} unassigned leads`}
             icon={FolderKanban}
-            color="#6366f1"
+            color="#003865"
+          />
+          <StatsCard
+            title="Today's Follow-ups"
+            value={data?.todayFollowupsCount || 0}
+            subtitle={`${data?.overdueFollowupsCount || 0} overdue follow-up tasks`}
+            icon={Clock}
+            color="#0284c7"
           />
           <StatsCard
             title="Total Pipeline Value"
             value={`₹${(data?.totalPipelineValue || 0).toLocaleString('en-IN')}`}
             subtitle="Combined potential deal value"
             icon={DollarSign}
-            color="#06b6d4"
+            color="#0d9488"
           />
           <StatsCard
             title="Won Customer Revenue"
             value={`₹${(data?.wonRevenue || 0).toLocaleString('en-IN')}`}
             subtitle={`${data?.convertedLeads || 0} deals successfully closed`}
             icon={TrendingUp}
-            color="#10b981"
+            color="#00a651"
           />
           <StatsCard
             title="Sales Team Members"
             value={data?.totalStaff || 0}
             subtitle={`${data?.conversionRate || 0}% overall conversion rate`}
             icon={Users}
-            color="#f59e0b"
+            color="#d97706"
           />
         </div>
 

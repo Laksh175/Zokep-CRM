@@ -44,7 +44,24 @@ export const getAdminDashboard = async (req, res) => {
     const staffLeadMap = {};
     const staffConvertedMap = {};
 
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+
+    let todayFollowupsCount = 0;
+    let overdueFollowupsCount = 0;
+
     allLeads.forEach((l) => {
+      if (!l.isConverted && l.nextFollowupDate) {
+        const fDate = new Date(l.nextFollowupDate);
+        if (fDate >= startOfToday && fDate <= endOfToday) {
+          todayFollowupsCount++;
+        } else if (fDate < startOfToday) {
+          overdueFollowupsCount++;
+        }
+      }
+
       if (l.isConverted) {
         convertedLeads++;
         wonRevenue += (l.convertedDealAmount || l.dealValue || 0);
@@ -129,6 +146,8 @@ export const getAdminDashboard = async (req, res) => {
       success: true,
       data: {
         totalLeads,
+        todayFollowupsCount,
+        overdueFollowupsCount,
         convertedLeads,
         unassignedLeads,
         totalStaff: staffMembers.length,

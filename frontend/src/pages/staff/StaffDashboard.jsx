@@ -66,28 +66,28 @@ export const StaffDashboard = () => {
             value={data?.myTotalLeads || 0}
             subtitle="Leads currently assigned to you"
             icon={FolderKanban}
-            color="#6366f1"
+            color="#003865"
           />
           <StatsCard
             title="Today's Follow-ups"
             value={data?.todayFollowupsCount || 0}
             subtitle="Scheduled for today"
             icon={Clock}
-            color="#06b6d4"
+            color="#0284c7"
           />
           <StatsCard
             title="Overdue Tasks"
             value={data?.overdueCount || 0}
             subtitle="Follow-ups past due date"
             icon={AlertCircle}
-            color="#f43f5e"
+            color="#e11d48"
           />
           <StatsCard
             title="My Won Customers"
             value={data?.myConvertedLeads || 0}
             subtitle={`${data?.conversionRate || 0}% personal conversion rate`}
             icon={UserCheck}
-            color="#10b981"
+            color="#00a651"
           />
         </div>
 

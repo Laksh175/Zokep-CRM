@@ -55,16 +55,16 @@ router.get('/', authorize('admin', 'staff'), getLeads);
 router.get('/export-csv', authorize('admin', 'staff'), exportLeadsCSV);
 router.get('/:id', authorize('admin', 'staff'), getLeadById);
 
-// Create lead requires active subscription
-router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
-router.put('/:id', authorize('admin', 'staff'), updateLead);
+// Specific sub-resource actions
 router.put('/:id/status', authorize('admin', 'staff'), updateLeadStatusDirectly);
 router.post('/:id/followup', authorize('admin', 'staff'), addFollowupAndUpdateStatus);
 router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
-
-// Admin-only actions
 router.put('/:id/reassign', authorize('admin'), reassignLead);
-router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
+
+// Base resource operations
+router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
+router.put('/:id', authorize('admin', 'staff'), updateLead);
 router.delete('/:id', authorize('admin'), deleteLead);
+router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
 
 export default router;
