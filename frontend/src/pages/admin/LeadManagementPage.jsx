@@ -309,7 +309,7 @@ export const LeadManagementPage = () => {
 
   const handleQuickStatusChange = async (leadId, newStatusId) => {
     try {
-      const res = await api.put(`/leads/${leadId}/status`, { statusId: newStatusId });
+      const res = await api.put(`/leads/${leadId}`, { statusId: newStatusId });
       if (res.success) {
         success(res.message || 'Status updated successfully');
         fetchLeads();
