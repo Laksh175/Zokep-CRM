@@ -268,27 +268,22 @@ export const updateLead = async (req, res) => {
     }
 
     // Status change
-    if (statusId) {
-      const isDifferent = !lead.statusId || String(lead.statusId?._id || lead.statusId) !== String(statusId);
-      if (isDifferent) {
-        lead.statusId = statusId;
-        const newStatusDoc = await LeadStatus.findById(statusId);
-        if (newStatusDoc?.isConvertedState) {
-          lead.isConverted = true;
-          lead.convertedAt = new Date();
-          lead.convertedDealAmount = lead.dealValue || 0;
-        } else if (newStatusDoc?.isLostState) {
-          lead.isConverted = false;
-        }
-        await ActivityLog.create({
-          tenantId,
-          leadId: lead._id,
-          performedBy: req.user._id,
-          type: 'status_change',
-          title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
-          note: `Updated during lead edit`,
-        });
+    if (statusId && String(lead.statusId) !== String(statusId)) {
+      lead.statusId = statusId;
+      const newStatusDoc = await LeadStatus.findById(statusId);
+      if (newStatusDoc?.isConvertedState) {
+        lead.isConverted = true;
+        lead.convertedAt = new Date();
+        lead.convertedDealAmount = lead.dealValue || 0;
       }
+      await ActivityLog.create({
+        tenantId,
+        leadId: lead._id,
+        performedBy: req.user._id,
+        type: 'status_change',
+        title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
+        note: `Updated during lead edit`,
+      });
     }
 
     // Only Admin can reassign
@@ -343,16 +338,17 @@ export const updateLeadStatusDirectly = async (req, res) => {
 
     const newStatusDoc = await LeadStatus.findById(statusId);
     lead.statusId = statusId;
-    lead.lastContactedAt = new Date();
 
     if (newStatusDoc?.isConvertedState) {
       lead.isConverted = true;
       lead.convertedAt = new Date();
       lead.convertedDealAmount = lead.dealValue || 0;
-    } else if (newStatusDoc?.isLostState) {
+    } else {
+      // If moved back to an active non-converted state
       lead.isConverted = false;
     }
 
+    lead.lastContactedAt = new Date();
     await lead.save();
 
     await ActivityLog.create({
@@ -360,21 +356,20 @@ export const updateLeadStatusDirectly = async (req, res) => {
       leadId: lead._id,
       performedBy: req.user._id,
       type: 'status_change',
-      title: `Status updated to ${newStatusDoc ? newStatusDoc.name : 'New Stage'}`,
-      note: `1-Click status update`,
+      title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
+      note: `Status updated via pipeline interface`,
     });
 
-    const updated = await Lead.findById(lead._id)
+    const populated = await Lead.findById(lead._id)
       .populate('statusId', 'name color isConvertedState isLostState')
       .populate('assignedTo', 'name email');
 
     return res.json({
       success: true,
-      message: `Status updated to ${newStatusDoc?.name || 'New Stage'}`,
-      data: updated,
+      message: `Status updated to ${newStatusDoc?.name || 'Updated'}`,
+      data: populated,
     });
   } catch (error) {
-    console.error('Update Status Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
