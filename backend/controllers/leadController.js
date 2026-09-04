@@ -331,7 +331,7 @@ export const updateLeadStatusDirectly = async (req, res) => {
       return res.status(400).json({ success: false, message: 'statusId is required' });
     }
 
-    const lead = await Lead.findOne({ _id: id, tenantId });
+    const lead = await Lead.findById(id);
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
     if (req.user.role === 'staff' && String(lead.assignedTo) !== String(req.user._id)) {
