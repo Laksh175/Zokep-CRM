@@ -275,6 +275,8 @@ export const updateLead = async (req, res) => {
         lead.isConverted = true;
         lead.convertedAt = new Date();
         lead.convertedDealAmount = lead.dealValue || 0;
+      } else {
+        lead.isConverted = false;
       }
       await ActivityLog.create({
         tenantId,
