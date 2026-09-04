@@ -268,24 +268,30 @@ export const updateLead = async (req, res) => {
     }
 
     // Status change
-    if (statusId && String(lead.statusId) !== String(statusId)) {
-      lead.statusId = statusId;
-      const newStatusDoc = await LeadStatus.findById(statusId);
-      if (newStatusDoc?.isConvertedState) {
-        lead.isConverted = true;
-        lead.convertedAt = new Date();
-        lead.convertedDealAmount = lead.dealValue || 0;
-      } else {
-        lead.isConverted = false;
+    if (statusId !== undefined && statusId !== null && statusId !== '') {
+      const currentStatusStr = lead.statusId ? String(lead.statusId._id || lead.statusId) : '';
+      const newStatusStr = String(statusId._id || statusId);
+
+      if (currentStatusStr !== newStatusStr) {
+        lead.statusId = newStatusStr;
+        const newStatusDoc = await LeadStatus.findById(newStatusStr);
+        if (newStatusDoc?.isConvertedState) {
+          lead.isConverted = true;
+          lead.convertedAt = new Date();
+          lead.convertedDealAmount = lead.dealValue || 0;
+        } else {
+          lead.isConverted = false;
+        }
+        lead.lastContactedAt = new Date();
+        await ActivityLog.create({
+          tenantId,
+          leadId: lead._id,
+          performedBy: req.user._id,
+          type: 'status_change',
+          title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
+          note: `Updated during lead edit`,
+        });
       }
-      await ActivityLog.create({
-        tenantId,
-        leadId: lead._id,
-        performedBy: req.user._id,
-        type: 'status_change',
-        title: `Status changed to: ${newStatusDoc?.name || 'Updated'}`,
-        note: `Updated during lead edit`,
-      });
     }
 
     // Only Admin can reassign
@@ -338,8 +344,9 @@ export const updateLeadStatusDirectly = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to modify this lead' });
     }
 
-    const newStatusDoc = await LeadStatus.findById(statusId);
-    lead.statusId = statusId;
+    const newStatusStr = String(statusId._id || statusId);
+    lead.statusId = newStatusStr;
+    const newStatusDoc = await LeadStatus.findById(newStatusStr);
 
     if (newStatusDoc?.isConvertedState) {
       lead.isConverted = true;

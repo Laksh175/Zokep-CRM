@@ -309,14 +309,7 @@ export const LeadManagementPage = () => {
 
   const handleQuickStatusChange = async (leadId, newStatusId) => {
     try {
-      let res;
-      try {
-        res = await api.put(`/leads/${leadId}/status`, { statusId: newStatusId });
-      } catch (err) {
-        // Fallback to standard lead update if subpath is not deployed yet
-        res = await api.put(`/leads/${leadId}`, { statusId: newStatusId });
-      }
-
+      const res = await api.put(`/leads/${leadId}`, { statusId: newStatusId });
       if (res && res.success) {
         success(res.message || 'Status updated successfully');
         fetchLeads();
