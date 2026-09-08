@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   Layers,
   ArrowRight,
@@ -16,12 +16,14 @@ import {
   Globe,
   Check,
   CreditCard,
+  Sliders,
 } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import api from '../../services/api';
 
 export const LandingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
@@ -30,6 +32,20 @@ export const LandingPage = () => {
   useEffect(() => {
     fetchPlans();
   }, []);
+
+  // Smooth scroll to target section when navigating with hash (e.g. /#pricing, /#features, /#industries)
+  useEffect(() => {
+    if (location.hash) {
+      const targetId = location.hash.replace('#', '');
+      const timer = setTimeout(() => {
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
 
   const fetchPlans = async () => {
     try {
@@ -183,6 +199,75 @@ export const LandingPage = () => {
               <span>Automated Nodemailer Credentials</span>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Core Features Overview Section */}
+      <section id="features" style={{ padding: '60px 24px', maxWidth: '1240px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '44px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              background: 'var(--primary-100)',
+              color: 'var(--primary-500)',
+              fontSize: '12px',
+              fontWeight: 700,
+              marginBottom: '12px',
+            }}
+          >
+            ⚡ CAPTURE • CONVERT • CLOSE
+          </div>
+          <h2 style={{ fontSize: '34px', fontWeight: 800, marginBottom: '12px' }}>
+            Next-Gen Tools to <span style={{ color: 'var(--accent-green)' }}>Supercharge Your Pipeline</span>
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '16px', maxWidth: '680px', margin: '0 auto' }}>
+            Built specifically to eliminate messy spreadsheets and slow sales follow-ups with instant WhatsApp and automated workflows.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', marginBottom: '36px' }}>
+          {/* Feature 1 */}
+          <div className="glass-panel" style={{ padding: '32px', borderRadius: '20px' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: 'rgba(37, 211, 102, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a', marginBottom: '18px' }}>
+              <MessageSquare size={22} />
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>1-Click WhatsApp Direct (wa.me)</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
+              Launch instant WhatsApp chats without saving contact numbers. Pre-fill customer names and deal info dynamically.
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="glass-panel" style={{ padding: '32px', borderRadius: '20px' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: 'rgba(0, 56, 101, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-500)', marginBottom: '18px' }}>
+              <Sliders size={22} />
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Dynamic Form Fields Builder</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
+              Add custom text, number, dropdown, radio, or date fields to tailor your CRM to Real Estate, Manufacturing, or Agency workflows.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="glass-panel" style={{ padding: '32px', borderRadius: '20px' }}>
+            <div style={{ width: 44, height: 44, borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-green)', marginBottom: '18px' }}>
+              <Globe size={22} />
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px' }}>Public Form Link & Website Embed</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
+              Share your dedicated lead capture link on Google & Meta Ads, or embed the iframe into your website for zero lead leakage.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'center' }}>
+          <Link to="/features" className="btn btn-primary btn-lg" style={{ fontSize: '15px' }}>
+            Explore Full Features Breakdown <ArrowRight size={17} />
+          </Link>
         </div>
       </section>
 
@@ -487,8 +572,8 @@ export const LandingPage = () => {
           </div>
           <div style={{ display: 'flex', gap: '20px', fontSize: '14px', color: 'var(--text-secondary)' }}>
             <Link to="/login">Universal Login</Link>
-            <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
+            <Link to="/features">Features</Link>
+            <a href="/#pricing">Pricing</a>
           </div>
         </div>
       </footer>

@@ -31,9 +31,9 @@ export const Navbar = () => {
 
         {/* Navigation Links */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '28px' }}>
-          <a href="/#features" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+          <Link to="/features" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
             Features
-          </a>
+          </Link>
           <a href="/#industries" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)' }}>
             Industries
           </a>

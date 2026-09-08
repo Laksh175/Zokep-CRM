@@ -1,10 +1,28 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 
+// ScrollToTop Component: Resets scroll to top whenever user changes page
+const ScrollToTop = () => {
+  const { pathname, hash } = useLocation();
+
+  useEffect(() => {
+    if (!hash) {
+      window.scrollTo(0, 0);
+      const mainContent = document.querySelector('.main-content');
+      if (mainContent) {
+        mainContent.scrollTop = 0;
+      }
+    }
+  }, [pathname, hash]);
+
+  return null;
+};
+
 // Public & Auth Pages
 import LandingPage from './pages/landing/LandingPage';
+import FeaturesPage from './pages/landing/FeaturesPage';
 import CheckoutPage from './pages/landing/CheckoutPage';
 import LoginPage from './pages/auth/LoginPage';
 import PublicLeadFormPage from './pages/public/PublicLeadFormPage';
@@ -59,9 +77,12 @@ const ProtectedLayout = ({ allowedRoles, children }) => {
 
 export const App = () => {
   return (
-    <Routes>
-      {/* Public Pages */}
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Public Pages */}
       <Route path="/" element={<LandingPage />} />
+      <Route path="/features" element={<FeaturesPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/f/:tenantId" element={<PublicLeadFormPage />} />
@@ -171,6 +192,7 @@ export const App = () => {
       {/* Catch-all */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 };
 
