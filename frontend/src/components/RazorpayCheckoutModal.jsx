@@ -4,6 +4,7 @@ import Modal from './Modal';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import confetti from 'canvas-confetti';
+import { loadRazorpayScript } from '../utils/loadRazorpay';
 
 export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'monthly', onPaymentSuccess }) => {
   const { success, error } = useToast();
@@ -15,6 +16,7 @@ export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'm
   const triggerRazorpayCheckout = async () => {
     try {
       setLoading(true);
+      await loadRazorpayScript();
 
       // 1. Create order on backend
       const orderRes = await api.post('/subscriptions/create-order', {

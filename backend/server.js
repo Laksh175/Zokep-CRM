@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
+import compression from 'compression';
 import connectDB from './config/db.js';
 import { initMailer } from './utils/mailer.js';
 
@@ -19,6 +20,9 @@ dotenv.config();
 
 const app = express();
 
+// Gzip / Brotli response compression middleware
+app.use(compression());
+
 // Connect to Database & Mailer
 connectDB();
 initMailer();
@@ -32,11 +36,17 @@ app.use(
 );
 
 // Body parser
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static uploads directory
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// Static uploads directory with caching headers
+app.use(
+  '/uploads',
+  express.static(path.join(process.cwd(), 'uploads'), {
+    maxAge: '1d',
+    etag: true,
+  })
+);
 
 // API Routes
 app.use('/api/auth', authRoutes);

@@ -19,6 +19,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import confetti from 'canvas-confetti';
+import { loadRazorpayScript } from '../../utils/loadRazorpay';
 
 export const CheckoutPage = () => {
   const [searchParams] = useSearchParams();
