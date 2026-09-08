@@ -527,28 +527,32 @@ export const LeadManagementPage = () => {
                           ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
                         </td>
                         <td>
-                          <select
-                            className="form-select"
+                          <span
                             style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
                               fontSize: '12px',
-                              padding: '4px 8px',
-                              height: 'auto',
-                              minWidth: '125px',
                               fontWeight: 600,
-                              background: 'var(--bg-surface)',
-                              borderLeft: `4px solid ${lead.statusId?.color || '#3b82f6'}`,
-                              borderRadius: '6px',
+                              padding: '4px 10px',
+                              borderRadius: '20px',
+                              backgroundColor: `${lead.statusId?.color || '#3b82f6'}18`,
+                              color: lead.statusId?.color || '#3b82f6',
+                              border: `1px solid ${lead.statusId?.color || '#3b82f6'}40`,
+                              whiteSpace: 'nowrap',
                             }}
-                            value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
-                            onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
-                            title="Change Lead Pipeline Status"
+                            title="Pipeline status is updated by assigned Sales Staff"
                           >
-                            {statuses.map((st) => (
-                              <option key={st._id || st.id} value={st._id || st.id}>
-                                {st.name}
-                              </option>
-                            ))}
-                          </select>
+                            <span
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: lead.statusId?.color || '#3b82f6',
+                              }}
+                            />
+                            {lead.statusId?.name || 'New Lead'}
+                          </span>
                         </td>
                         <td>
                           <select
@@ -707,20 +711,23 @@ export const LeadManagementPage = () => {
                           {lead.company || lead.phone}
                         </p>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', paddingTop: '6px', borderTop: '1px solid var(--border-subtle)', flexWrap: 'wrap' }}>
-                          <select
-                            className="form-select"
-                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '110px' }}
-                            value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
-                            title="Move Stage"
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontSize: '11px',
+                              fontWeight: 600,
+                              padding: '2px 8px',
+                              borderRadius: '12px',
+                              backgroundColor: `${status.color}18`,
+                              color: status.color,
+                              border: `1px solid ${status.color}30`,
+                            }}
+                            title="Pipeline status is updated by assigned Sales Staff"
                           >
-                            {statuses.map((st) => (
-                              <option key={st._id || st.id} value={st._id || st.id}>
-                                {st.name}
-                              </option>
-                            ))}
-                          </select>
+                            {status.name}
+                          </span>
                           <select
                             className="form-select"
                             style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '110px' }}
@@ -862,11 +869,15 @@ export const LeadManagementPage = () => {
               </select>
             </div>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Pipeline Stage / Status</label>
+              <label className="form-label">
+                Pipeline Stage / Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
+              </label>
               <select
                 className="form-select"
                 value={leadForm.statusId}
-                onChange={(e) => setLeadForm({ ...leadForm, statusId: e.target.value })}
+                disabled={true}
+                style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-card)' }}
+                title="Pipeline status can only be updated by Sales Staff"
               >
                 {statuses.map((st) => (
                   <option key={st._id} value={st._id}>
@@ -1034,11 +1045,15 @@ export const LeadManagementPage = () => {
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
                 <div>
-                  <label className="form-label">Update Status</label>
+                  <label className="form-label">
+                    Update Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
+                  </label>
                   <select
                     className="form-select"
                     value={newStatusId}
-                    onChange={(e) => setNewStatusId(e.target.value)}
+                    disabled={true}
+                    style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-card)' }}
+                    title="Pipeline status can only be updated by Sales Staff"
                   >
                     {statuses.map((st) => (
                       <option key={st._id} value={st._id}>

@@ -124,6 +124,53 @@ export const LoginPage = () => {
               {loading ? 'Authenticating...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Quick Demo Login Buttons - Only visible in local development environment */}
+          {import.meta.env.DEV && (
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
+              <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px', textAlign: 'center' }}>
+                ⚡ Quick 1-Click Demo Login (Dev Mode Only)
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', justifyContent: 'space-between', fontSize: '12px' }}
+                  onClick={() => {
+                    setEmail('realestate.admin@example.com');
+                    setPassword('Admin@123');
+                  }}
+                >
+                  <span>🏢 <strong>Tenant Admin</strong></span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>realestate.admin@example.com</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', justifyContent: 'space-between', fontSize: '12px' }}
+                  onClick={() => {
+                    setEmail('rohit.sales@example.com');
+                    setPassword('Staff@123');
+                  }}
+                >
+                  <span>👤 <strong>Sales Staff</strong></span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>rohit.sales@example.com</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  style={{ width: '100%', justifyContent: 'space-between', fontSize: '12px' }}
+                  onClick={() => {
+                    setEmail('superadmin@zokepcrm.com');
+                    setPassword('SuperAdmin@123');
+                  }}
+                >
+                  <span>👑 <strong>Super Admin</strong></span>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>superadmin@zokepcrm.com</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
