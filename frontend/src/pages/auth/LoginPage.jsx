@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Layers, LogIn, Lock, Mail, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Layers, LogIn, Lock, Mail, ShieldAlert, ArrowRight, ArrowLeft, Home } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 
@@ -52,6 +52,27 @@ export const LoginPage = () => {
         position: 'relative',
       }}
     >
+      {/* Top-Left Navigation Back Button */}
+      <Link
+        to="/"
+        className="btn btn-secondary btn-sm"
+        style={{
+          position: 'absolute',
+          top: '24px',
+          left: '24px',
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontWeight: 600,
+          boxShadow: 'var(--shadow-sm)',
+          zIndex: 10,
+        }}
+        title="Return to ZOKEP Landing Homepage"
+      >
+        <ArrowLeft size={16} color="var(--primary-500)" />
+        <span>Back to Website</span>
+      </Link>
+
       {/* Background Glow */}
       <div
         style={{
@@ -64,10 +85,10 @@ export const LoginPage = () => {
         }}
       />
 
-      <div style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: '440px', position: 'relative', zIndex: 1, marginTop: '20px' }}>
         {/* Brand Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <Link to="/" style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '16px' }}>
+          <Link to="/" style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '16px' }} title="Go to ZOKEP Home">
             <img
               src="/logo.png"
               alt="ZOKEP CRM"
@@ -173,12 +194,19 @@ export const LoginPage = () => {
           )}
         </div>
 
-        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-          Don't have an organization account yet?{' '}
-          <Link to="/#pricing" style={{ color: 'var(--primary-500)', fontWeight: 600 }}>
-            Get a Subscription
-          </Link>
-        </p>
+        <div style={{ textAlign: 'center', marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+          <p style={{ margin: 0 }}>
+            Don't have an organization account yet?{' '}
+            <Link to="/pricing" style={{ color: 'var(--primary-500)', fontWeight: 700 }}>
+              Get a Subscription
+            </Link>
+          </p>
+          <div>
+            <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px', textDecoration: 'underline' }}>
+              <Home size={13} /> Return to ZOKEP Homepage
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );
