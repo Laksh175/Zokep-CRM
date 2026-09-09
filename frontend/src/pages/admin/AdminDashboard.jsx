@@ -67,6 +67,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 export const AdminDashboard = () => {
   const { error } = useToast();
   const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     // 0ms Instant Cache Hydration for instant LCP paint
     const cached = localStorage.getItem('zokep_admin_dash_cache');

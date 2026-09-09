@@ -14,6 +14,7 @@ import {
 import Header from '../../components/Header';
 import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
+import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
@@ -152,27 +153,29 @@ export const AdminManagementPage = () => {
           </form>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-            <select
-              className="form-select"
-              style={{ width: '160px' }}
+            <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Accounts</option>
-              <option value="active">Active Only</option>
-              <option value="inactive">Suspended</option>
-            </select>
+              placeholder="All Accounts"
+              style={{ width: '160px' }}
+              options={[
+                { value: '', label: 'All Accounts' },
+                { value: 'active', label: 'Active Only' },
+                { value: 'inactive', label: 'Suspended' },
+              ]}
+            />
 
-            <select
-              className="form-select"
-              style={{ width: '170px' }}
+            <CustomSelect
               value={subFilter}
               onChange={(e) => setSubFilter(e.target.value)}
-            >
-              <option value="">All Subscriptions</option>
-              <option value="active">Active Subscriptions</option>
-              <option value="expired">Expired Subscriptions</option>
-            </select>
+              placeholder="All Subscriptions"
+              style={{ width: '180px' }}
+              options={[
+                { value: '', label: 'All Subscriptions' },
+                { value: 'active', label: 'Active Subscriptions' },
+                { value: 'expired', label: 'Expired Subscriptions' },
+              ]}
+            />
           </div>
         </div>
 
@@ -328,17 +331,17 @@ export const AdminManagementPage = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Extension Period (Days)</label>
-            <select
-              className="form-select"
+            <CustomSelect
               value={extendDays}
               onChange={(e) => setExtendDays(Number(e.target.value))}
-            >
-              <option value={7}>7 Days Trial</option>
-              <option value={15}>15 Days Grace Period</option>
-              <option value={30}>30 Days (1 Month)</option>
-              <option value={60}>60 Days (2 Months)</option>
-              <option value={90}>90 Days (Quarterly)</option>
-            </select>
+              options={[
+                { value: 7, label: '7 Days Trial' },
+                { value: 15, label: '15 Days Grace Period' },
+                { value: 30, label: '30 Days (1 Month)' },
+                { value: 60, label: '60 Days (2 Months)' },
+                { value: 90, label: '90 Days (Quarterly)' },
+              ]}
+            />
           </div>
         </div>
       </Modal>
