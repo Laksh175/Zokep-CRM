@@ -16,9 +16,13 @@ export const getStaffDashboard = async (req, res) => {
     endOfToday.setHours(23, 59, 59, 999);
 
     const [myLeads, statuses, recentActivities] = await Promise.all([
-      Lead.find({ tenantId, assignedTo: staffId }).populate('statusId', 'name color').lean(),
-      LeadStatus.find({ tenantId }).sort({ order: 1 }).lean(),
+      Lead.find({ tenantId, assignedTo: staffId })
+        .select('name phone company statusId nextFollowupDate isConverted dealValue convertedDealAmount createdAt')
+        .populate('statusId', 'name color')
+        .lean(),
+      LeadStatus.find({ tenantId }).sort({ order: 1 }).select('name color _id').lean(),
       ActivityLog.find({ tenantId, performedBy: staffId })
+        .select('title note createdAt leadId')
         .populate('leadId', 'name phone company')
         .sort({ createdAt: -1 })
         .limit(10)

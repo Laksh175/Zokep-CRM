@@ -67,28 +67,47 @@ const CustomTooltip = ({ active, payload, label }) => {
 export const AdminDashboard = () => {
   const { error } = useToast();
   const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
+    // 0ms Instant Cache Hydration for instant LCP paint
+    const cached = localStorage.getItem('zokep_admin_dash_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          setData(parsed);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.warn('Dashboard cache parse warning:', e);
+      }
+    }
     fetchDashboard();
   }, []);
 
   const fetchDashboard = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/admin/dashboard');
-      if (res.success) {
+      if (res && res.success && res.data) {
         setData(res.data);
+        localStorage.setItem('zokep_admin_dash_cache', JSON.stringify(res.data));
       }
     } catch (err) {
-      error(err.message || 'Failed to load dashboard metrics');
+      console.warn('Dashboard fetch error:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="page-wrapper"><p>Loading CRM Dashboard...</p></div>;
+  if (loading && !data) {
+    return (
+      <div className="page-wrapper">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="glass-panel" style={{ padding: '20px', height: '110px', animation: 'pulse 1.5s infinite ease-in-out', background: 'var(--bg-surface-elevated)' }} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

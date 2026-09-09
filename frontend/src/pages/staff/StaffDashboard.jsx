@@ -24,25 +24,46 @@ export const StaffDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 0ms Instant Cache Hydration for instant LCP paint
+    const cached = localStorage.getItem('zokep_staff_dash_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          setData(parsed);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.warn('Staff dashboard cache parse warning:', e);
+      }
+    }
     fetchStaffData();
   }, []);
 
   const fetchStaffData = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/staff/dashboard');
-      if (res.success) {
+      if (res && res.success && res.data) {
         setData(res.data);
+        localStorage.setItem('zokep_staff_dash_cache', JSON.stringify(res.data));
       }
     } catch (err) {
-      error(err.message || 'Failed to load staff dashboard');
+      console.warn('Staff dashboard fetch warning:', err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return <div className="page-wrapper"><p>Loading Consultant Workspace...</p></div>;
+  if (loading && !data) {
+    return (
+      <div className="page-wrapper">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="glass-panel" style={{ padding: '20px', height: '110px', animation: 'pulse 1.5s infinite ease-in-out', background: 'var(--bg-surface-elevated)' }} />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -16,16 +16,19 @@ export const getAdminDashboard = async (req, res) => {
     const now = new Date();
     const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // Fetch all collections in parallel in a single database round-trip
+    // Fetch all collections in parallel with field projections for high-speed Mongo query execution
     const [allLeads, statuses, staffMembers, upcomingFollowups] = await Promise.all([
-      Lead.find({ tenantId }).lean(),
-      LeadStatus.find({ tenantId }).sort({ order: 1 }).lean(),
+      Lead.find({ tenantId })
+        .select('statusId assignedTo isConverted dealValue convertedDealAmount createdAt convertedAt nextFollowupDate source')
+        .lean(),
+      LeadStatus.find({ tenantId }).sort({ order: 1 }).select('name color order _id').lean(),
       User.find({ tenantId, role: 'staff' }).select('name email phone isActive _id').lean(),
       Lead.find({
         tenantId,
         nextFollowupDate: { $gte: now, $lte: nextWeek },
         isConverted: false,
       })
+        .select('name assignedTo nextFollowupDate statusId')
         .populate('assignedTo', 'name email')
         .populate('statusId', 'name color')
         .sort({ nextFollowupDate: 1 })
@@ -111,36 +114,33 @@ export const getAdminDashboard = async (req, res) => {
       };
     });
 
-    // 14-Day Time-Series Lead Trend for Graph
+    // 14-Day Time-Series Lead Trend (High-Speed Single Pass Algorithm)
+    const trendMap = {};
     const trendData = [];
+
     for (let i = 13; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
-      const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
-
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       const dayLabel = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
       const fullDateLabel = `${String(d.getDate()).padStart(2, '0')}-${String(d.getMonth() + 1).padStart(2, '0')}-${d.getFullYear()}`;
 
-      let createdCount = 0;
-      let convertedCount = 0;
-
-      allLeads.forEach((l) => {
-        const cDate = new Date(l.createdAt);
-        if (cDate >= startOfDay && cDate <= endOfDay) createdCount++;
-        if (l.convertedAt) {
-          const cvDate = new Date(l.convertedAt);
-          if (cvDate >= startOfDay && cvDate <= endOfDay) convertedCount++;
-        }
-      });
-
-      trendData.push({
-        date: dayLabel,
-        fullDate: fullDateLabel,
-        newLeads: createdCount,
-        converted: convertedCount,
-      });
+      trendMap[key] = { date: dayLabel, fullDate: fullDateLabel, newLeads: 0, converted: 0 };
+      trendData.push(trendMap[key]);
     }
+
+    allLeads.forEach((l) => {
+      if (l.createdAt) {
+        const cDate = new Date(l.createdAt);
+        const cKey = `${cDate.getFullYear()}-${String(cDate.getMonth() + 1).padStart(2, '0')}-${String(cDate.getDate()).padStart(2, '0')}`;
+        if (trendMap[cKey]) trendMap[cKey].newLeads++;
+      }
+      if (l.convertedAt) {
+        const cvDate = new Date(l.convertedAt);
+        const cvKey = `${cvDate.getFullYear()}-${String(cvDate.getMonth() + 1).padStart(2, '0')}-${String(cvDate.getDate()).padStart(2, '0')}`;
+        if (trendMap[cvKey]) trendMap[cvKey].converted++;
+      }
+    });
 
     return res.json({
       success: true,

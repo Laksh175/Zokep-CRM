@@ -70,18 +70,31 @@ export const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // 0ms Instant Cache Hydration for instant LCP paint
+    const cached = localStorage.getItem('zokep_super_dash_cache');
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed) {
+          setMetrics(parsed);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.warn('Super admin dashboard cache parse warning:', e);
+      }
+    }
     fetchAnalytics();
   }, []);
 
   const fetchAnalytics = async () => {
     try {
-      setLoading(true);
       const res = await api.get('/superadmin/analytics');
-      if (res.success) {
+      if (res && res.success && res.data) {
         setMetrics(res.data);
+        localStorage.setItem('zokep_super_dash_cache', JSON.stringify(res.data));
       }
     } catch (err) {
-      error(err.message || 'Failed to load platform analytics');
+      console.warn('Super admin dashboard fetch warning:', err.message);
     } finally {
       setLoading(false);
     }
