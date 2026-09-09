@@ -1,36 +1,29 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ExternalLink, Crown, ShieldAlert, Sparkles } from 'lucide-react';
+import { ExternalLink, Crown, ShieldAlert, Sparkles, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Header = ({ title, subtitle, actions }) => {
-  const { user, subscription, isAdmin } = useAuth();
+  const { user, subscription, isAdmin, toggleSidebar, sidebarOpen } = useAuth();
 
   return (
-    <header
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 30,
-        padding: '18px 32px',
-        borderBottom: '1px solid var(--border-subtle)',
-        background: 'rgba(255, 255, 255, 0.96)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        boxShadow: '0 1px 3px 0 rgba(0, 34, 68, 0.04)',
-      }}
-    >
-      <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 800, margin: 0, letterSpacing: '-0.5px' }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>{subtitle}</p>}
+    <header className="page-header">
+      <div className="header-left">
+        <button
+          className="mobile-sidebar-toggle"
+          onClick={toggleSidebar}
+          aria-label="Toggle Sidebar Navigation"
+          title="Toggle Navigation Menu"
+        >
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+        <div>
+          <h1 className="header-title">{title}</h1>
+          {subtitle && <p className="header-subtitle">{subtitle}</p>}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+      <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
 
         {/* Public Form Quick Link for Admin */}
         {isAdmin && user?.tenantId && (

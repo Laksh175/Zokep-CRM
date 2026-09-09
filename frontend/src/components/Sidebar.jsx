@@ -14,43 +14,69 @@ import {
   ShieldCheck,
   CheckCircle2,
   AlertTriangle,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Sidebar = () => {
-  const { user, subscription, logout, isSuperAdmin, isAdmin, isStaff } = useAuth();
+  const { user, subscription, logout, isSuperAdmin, isAdmin, isStaff, sidebarOpen, closeSidebar } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    closeSidebar();
     logout();
     navigate('/login');
   };
 
   return (
-    <aside className="sidebar">
-      {/* Brand Header */}
+    <>
+      {/* Mobile Backdrop Overlay */}
       <div
-        style={{
-          padding: '24px 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <img
-          src="/logo.png"
-          alt="ZOKEP CRM"
+        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
+        onClick={closeSidebar}
+      />
+
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        {/* Brand Header */}
+        <div
           style={{
-            maxHeight: '46px',
-            maxWidth: '190px',
-            width: 'auto',
-            objectFit: 'contain',
-            display: 'block',
-            margin: '0 auto',
+            padding: '20px 18px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
           }}
-        />
-      </div>
+        >
+          <img
+            src="/logo.png"
+            alt="ZOKEP CRM"
+            style={{
+              maxHeight: '42px',
+              maxWidth: '170px',
+              width: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+            }}
+          />
+          <button
+            onClick={closeSidebar}
+            className="mobile-sidebar-close"
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px',
+              borderRadius: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+            title="Close Menu"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
       {/* Subscription Banner for Admin */}
       {isAdmin && subscription && (
@@ -90,6 +116,7 @@ export const Sidebar = () => {
             <NavLink
               to="/superadmin"
               end
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -98,6 +125,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/superadmin/admins"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -106,6 +134,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/superadmin/plans"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -121,6 +150,7 @@ export const Sidebar = () => {
             <NavLink
               to="/admin"
               end
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -129,6 +159,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/admin/leads"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -137,6 +168,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/admin/staff"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -145,6 +177,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/admin/customers"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -153,6 +186,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/admin/settings"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -161,6 +195,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/admin/billing"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -176,6 +211,7 @@ export const Sidebar = () => {
             <NavLink
               to="/staff"
               end
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -184,6 +220,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/staff/leads"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -192,6 +229,7 @@ export const Sidebar = () => {
             </NavLink>
             <NavLink
               to="/staff/customers"
+              onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
               style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
             >
@@ -243,6 +281,7 @@ export const Sidebar = () => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

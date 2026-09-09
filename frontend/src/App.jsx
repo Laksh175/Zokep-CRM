@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import ScrollToTopButton from './components/ScrollToTopButton';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // ScrollToTop Component: Resets scroll to top whenever user changes page
 const ScrollToTop = () => {
@@ -111,7 +112,7 @@ const ProtectedLayout = ({ allowedRoles, children }) => {
 
 export const App = () => {
   return (
-    <>
+    <ErrorBoundary>
       <ScrollToTop />
       <Suspense fallback={<PageFallback />}>
         <Routes>
@@ -233,7 +234,7 @@ export const App = () => {
         </Routes>
       </Suspense>
       <ScrollToTopButton />
-    </>
+    </ErrorBoundary>
   );
 };
 

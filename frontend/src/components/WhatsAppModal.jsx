@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Send, MessageSquare, ExternalLink } from 'lucide-react';
 import Modal from './Modal';
+import WhatsAppIcon from './WhatsAppIcon';
+import CustomSelect from './CustomSelect';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,22 +17,31 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
 
   useEffect(() => {
     if (isOpen) {
+      if (lead) {
+        setMessageText(`Hello ${lead.name || 'there'}, this is ${user?.name || 'Representative'} from ${user?.companyName || 'our team'}. Hope you are doing well!`);
+      }
       fetchTemplates();
     }
-  }, [isOpen]);
+  }, [isOpen, lead]);
 
   const fetchTemplates = async () => {
     try {
       const res = await api.get('/settings/templates', { type: 'whatsapp' });
-      if (res.success && res.data.length > 0) {
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
         setTemplates(res.data);
         applyTemplate(res.data[0]);
         setSelectedTemplateId(res.data[0]._id);
       } else {
-        setMessageText(`Hello ${lead?.name || 'there'}, this is ${user?.name} from ${user?.companyName || 'our team'}. Hope you are doing well!`);
+        setTemplates([]);
+        if (lead) {
+          setMessageText(`Hello ${lead.name || 'there'}, this is ${user?.name || 'Representative'} from ${user?.companyName || 'our team'}. Hope you are doing well!`);
+        }
       }
     } catch (err) {
       console.warn('Failed to load templates:', err.message);
+      if (lead) {
+        setMessageText(`Hello ${lead.name || 'there'}, this is ${user?.name || 'Representative'} from ${user?.companyName || 'our team'}. Hope you are doing well!`);
+      }
     }
   };
 
@@ -46,11 +57,17 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
       .replace(/{{staff_name}}/gi, user?.name || 'Representative')
       .replace(/{{deal_value}}/gi, lead.dealValue ? `₹${lead.dealValue}` : '');
 
-    // Replace custom field tokens if present
-    if (lead.customFieldsData) {
+    // Replace custom field tokens safely
+    if (lead.customFieldsData && typeof lead.customFieldsData === 'object') {
       Object.keys(lead.customFieldsData).forEach((key) => {
-        const regex = new RegExp(`{{${key}}}`, 'gi');
-        body = body.replace(regex, lead.customFieldsData[key] || '');
+        try {
+          const val = lead.customFieldsData[key];
+          const stringVal = Array.isArray(val) ? val.join(', ') : String(val ?? '');
+          const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          body = body.replace(new RegExp(`{{${escapedKey}}}`, 'gi'), stringVal);
+        } catch (e) {
+          console.warn('Token replace warning:', e);
+        }
       });
     }
 
@@ -70,18 +87,33 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
     }
 
     // Sanitize phone number for WhatsApp wa.me/ link (e.g. wa.me/919876543210)
-    let cleanPhone = lead.phone.replace(/[^0-9]/g, '');
+    let cleanPhone = (lead.phone || '').replace(/[^0-9]/g, '').replace(/^0+/, '');
     if (cleanPhone.length === 10) {
       cleanPhone = `91${cleanPhone}`; // default to India country code 91 if 10 digits
+    }
+
+    if (!cleanPhone) {
+      error('Invalid phone number format');
+      return;
     }
 
     const encodedText = encodeURIComponent(messageText);
     const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedText}`;
 
-    // Open WhatsApp in new tab
-    window.open(whatsappUrl, '_blank');
+    // Open WhatsApp in a NEW tab using programmatic link click to guarantee CRM tab never navigates or turns blank
+    try {
+      const link = document.createElement('a');
+      link.href = whatsappUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+    }
 
-    // Record follow-up activity log
+    // Record follow-up activity log in background
     try {
       setLoading(true);
       await api.post(`/leads/${lead._id}/followup`, {
@@ -109,7 +141,7 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
             Cancel
           </button>
           <button className="btn btn-whatsapp" onClick={handleSend} disabled={loading}>
-            <ExternalLink size={16} />
+            <WhatsAppIcon size={16} color="#ffffff" />
             Open WhatsApp Chat
           </button>
         </>
@@ -125,17 +157,14 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
         {templates.length > 0 && (
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Select WhatsApp Template</label>
-            <select
-              className="form-select"
+            <CustomSelect
               value={selectedTemplateId}
               onChange={(e) => handleTemplateChange(e.target.value)}
-            >
-              {templates.map((tpl) => (
-                <option key={tpl._id} value={tpl._id}>
-                  {tpl.title}
-                </option>
-              ))}
-            </select>
+              options={templates.map((tpl) => ({
+                value: tpl._id,
+                label: tpl.title,
+              }))}
+            />
           </div>
         )}
 

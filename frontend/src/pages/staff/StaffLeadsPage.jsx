@@ -18,6 +18,8 @@ import Badge from '../../components/Badge';
 import DynamicFieldRenderer from '../../components/DynamicFieldRenderer';
 import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
+import WhatsAppIcon from '../../components/WhatsAppIcon';
+import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatDateTime } from '../../utils/date';
@@ -80,8 +82,8 @@ export const StaffLeadsPage = () => {
         api.get('/settings/statuses'),
         api.get('/settings/custom-fields'),
       ]);
-      if (statusRes.success) setStatuses(statusRes.data);
-      if (fieldsRes.success) setCustomFields(fieldsRes.data);
+      if (statusRes && statusRes.success && Array.isArray(statusRes.data)) setStatuses(statusRes.data);
+      if (fieldsRes && fieldsRes.success && Array.isArray(fieldsRes.data)) setCustomFields(fieldsRes.data);
     } catch (err) {
       console.warn('Metadata load warning:', err.message);
     }
@@ -95,11 +97,14 @@ export const StaffLeadsPage = () => {
         statusId: statusFilter,
         priority: priorityFilter,
       });
-      if (res.success) {
+      if (res && res.success && Array.isArray(res.data)) {
         setLeads(res.data);
+      } else {
+        setLeads([]);
       }
     } catch (err) {
       error(err.message || 'Failed to fetch your leads');
+      setLeads([]);
     } finally {
       setLoading(false);
     }
@@ -262,32 +267,34 @@ export const StaffLeadsPage = () => {
           </form>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <select
-              className="form-select"
-              style={{ width: '160px' }}
+            <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              {statuses.map((st) => (
-                <option key={st._id} value={st._id}>
-                  {st.name}
-                </option>
-              ))}
-            </select>
+              placeholder="All Statuses"
+              style={{ width: '160px' }}
+              options={[
+                { value: '', label: 'All Statuses' },
+                ...statuses.map((st) => ({
+                  value: st._id,
+                  label: st.name,
+                  color: st.color,
+                })),
+              ]}
+            />
 
-            <select
-              className="form-select"
-              style={{ width: '130px' }}
+            <CustomSelect
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="">All Priority</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+              placeholder="All Priority"
+              style={{ width: '130px' }}
+              options={[
+                { value: '', label: 'All Priority' },
+                { value: 'urgent', label: 'Urgent' },
+                { value: 'high', label: 'High' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'low', label: 'Low' },
+              ]}
+            />
           </div>
         </div>
 
@@ -342,28 +349,16 @@ export const StaffLeadsPage = () => {
                         ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
                       </td>
                       <td>
-                        <select
-                          className="form-select"
-                          style={{
-                            fontSize: '12px',
-                            padding: '4px 8px',
-                            height: 'auto',
-                            minWidth: '125px',
-                            fontWeight: 600,
-                            background: 'var(--bg-surface)',
-                            borderLeft: `4px solid ${lead.statusId?.color || '#3b82f6'}`,
-                            borderRadius: '6px',
-                          }}
+                        <CustomSelect
                           value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
                           onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
-                          title="Change Lead Pipeline Status"
-                        >
-                          {statuses.map((st) => (
-                            <option key={st._id || st.id} value={st._id || st.id}>
-                              {st.name}
-                            </option>
-                          ))}
-                        </select>
+                          style={{ minWidth: '135px' }}
+                          options={statuses.map((st) => ({
+                            value: st._id,
+                            label: st.name,
+                            color: st.color,
+                          }))}
+                        />
                       </td>
                       <td>
                         {lead.nextFollowupDate ? (
@@ -384,8 +379,8 @@ export const StaffLeadsPage = () => {
                             className="btn btn-whatsapp btn-sm"
                             title="1-Click WhatsApp"
                           >
-                            <MessageSquare size={13} />
-                            WA
+                            <WhatsAppIcon size={14} color="#ffffff" />
+                            <span>WA</span>
                           </button>
 
                           {lead.email && (
@@ -394,29 +389,29 @@ export const StaffLeadsPage = () => {
                                 setQuickActionLead(lead);
                                 setEmailModalOpen(true);
                               }}
-                              className="btn btn-secondary btn-sm"
+                              className="btn btn-secondary btn-action"
                               title="1-Click Email"
                             >
-                              <Mail size={13} />
+                              <Mail size={15} color="#0284c7" />
                             </button>
                           )}
 
                           {!lead.isConverted && (
                             <button
                               onClick={() => handleConvertToCustomer(lead)}
-                              className="btn btn-success btn-sm"
-                              title="Convert to Customer"
+                              className="btn btn-success btn-action"
+                              title="Convert to Customer Deal"
                             >
-                              <UserCheck size={13} />
+                              <UserCheck size={15} color="#ffffff" />
                             </button>
                           )}
 
                           <button
                             onClick={() => openLeadDetails(lead)}
-                            className="btn btn-secondary btn-sm"
-                            title="Update Follow-up"
+                            className="btn btn-secondary btn-action"
+                            title="Update Follow-up & View Activity"
                           >
-                            <Clock size={13} />
+                            <Clock size={15} color="#475569" />
                           </button>
                         </div>
                       </td>
@@ -447,7 +442,7 @@ export const StaffLeadsPage = () => {
         }
       >
         <form onSubmit={handleAddLead} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Lead Full Name *</label>
               <input
@@ -472,7 +467,7 @@ export const StaffLeadsPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Email Address</label>
               <input
@@ -495,7 +490,7 @@ export const StaffLeadsPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Deal Value (₹)</label>
               <input
@@ -508,17 +503,15 @@ export const StaffLeadsPage = () => {
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Initial Pipeline Stage</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={leadForm.statusId}
                 onChange={(e) => setLeadForm({ ...leadForm, statusId: e.target.value })}
-              >
-                {statuses.map((st) => (
-                  <option key={st._id} value={st._id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+                options={statuses.map((st) => ({
+                  value: st._id,
+                  label: st.name,
+                  color: st.color,
+                }))}
+              />
             </div>
           </div>
 
@@ -562,12 +555,21 @@ export const StaffLeadsPage = () => {
             <div style={{ background: 'var(--bg-surface-elevated)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <strong style={{ fontSize: '17px' }}>{activeLead.name}</strong>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  📞 {activeLead.phone} {activeLead.email && `• ✉️ ${activeLead.email}`}
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Phone size={13} color="var(--primary-500)" />
+                    {activeLead.phone}
+                  </span>
+                  {activeLead.email && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Mail size={13} color="#0284c7" />
+                      {activeLead.email}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => {
                     setQuickActionLead(activeLead);
@@ -575,8 +577,21 @@ export const StaffLeadsPage = () => {
                   }}
                   className="btn btn-whatsapp btn-sm"
                 >
-                  <MessageSquare size={14} /> WhatsApp
+                  <WhatsAppIcon size={14} color="#ffffff" />
+                  <span>WhatsApp</span>
                 </button>
+                {activeLead.email && (
+                  <button
+                    onClick={() => {
+                      setQuickActionLead(activeLead);
+                      setEmailModalOpen(true);
+                    }}
+                    className="btn btn-email btn-sm"
+                  >
+                    <Mail size={14} color="#ffffff" />
+                    <span>Email</span>
+                  </button>
+                )}
                 {!activeLead.isConverted && (
                   <button
                     onClick={() => handleConvertToCustomer(activeLead)}
@@ -591,20 +606,18 @@ export const StaffLeadsPage = () => {
             {/* Followup Log Form */}
             <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-medium)' }}>
               <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>Log Status & Next Follow-up</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+              <div className="form-grid-2" style={{ marginBottom: '10px' }}>
                 <div>
                   <label className="form-label">Status Stage</label>
-                  <select
-                    className="form-select"
+                  <CustomSelect
                     value={newStatusId}
                     onChange={(e) => setNewStatusId(e.target.value)}
-                  >
-                    {statuses.map((st) => (
-                      <option key={st._id} value={st._id}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={statuses.map((st) => ({
+                      value: st._id,
+                      label: st.name,
+                      color: st.color,
+                    }))}
+                  />
                 </div>
                 <div>
                   <label className="form-label">Next Contact Date</label>
@@ -656,20 +669,30 @@ export const StaffLeadsPage = () => {
       )}
 
       {/* 1-CLICK WHATSAPP MODAL */}
-      <WhatsAppModal
-        isOpen={whatsAppModalOpen}
-        onClose={() => setWhatsAppModalOpen(false)}
-        lead={quickActionLead}
-        onFollowupSuccess={fetchMyLeads}
-      />
+      {quickActionLead && (
+        <WhatsAppModal
+          isOpen={whatsAppModalOpen}
+          onClose={() => {
+            setWhatsAppModalOpen(false);
+            setQuickActionLead(null);
+          }}
+          lead={quickActionLead}
+          onFollowupSuccess={fetchMyLeads}
+        />
+      )}
 
       {/* 1-CLICK EMAIL MODAL */}
-      <EmailModal
-        isOpen={emailModalOpen}
-        onClose={() => setEmailModalOpen(false)}
-        lead={quickActionLead}
-        onEmailSuccess={fetchMyLeads}
-      />
+      {quickActionLead && (
+        <EmailModal
+          isOpen={emailModalOpen}
+          onClose={() => {
+            setEmailModalOpen(false);
+            setQuickActionLead(null);
+          }}
+          lead={quickActionLead}
+          onEmailSuccess={fetchMyLeads}
+        />
+      )}
     </div>
   );
 };

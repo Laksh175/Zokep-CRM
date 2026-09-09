@@ -16,6 +16,7 @@ import {
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
 import Badge from '../../components/Badge';
+import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -689,19 +690,19 @@ export const SettingsPage = () => {
 
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Field Type *</label>
-            <select
-              className="form-select"
+            <CustomSelect
               value={fieldForm.fieldType}
               onChange={(e) => setFieldForm({ ...fieldForm, fieldType: e.target.value })}
-            >
-              <option value="text">Text Box (Single Line)</option>
-              <option value="number">Numeric Number</option>
-              <option value="select">Dropdown Select</option>
-              <option value="radio">Radio Buttons</option>
-              <option value="checkbox">Multiple Checkboxes</option>
-              <option value="date">Date Picker</option>
-              <option value="textarea">Textarea (Multi-line)</option>
-            </select>
+              options={[
+                { value: 'text', label: 'Text Box (Single Line)' },
+                { value: 'number', label: 'Numeric Number' },
+                { value: 'select', label: 'Dropdown Select' },
+                { value: 'radio', label: 'Radio Buttons' },
+                { value: 'checkbox', label: 'Multiple Checkboxes' },
+                { value: 'date', label: 'Date Picker' },
+                { value: 'textarea', label: 'Textarea (Multi-line)' },
+              ]}
+            />
           </div>
 
           {['select', 'radio', 'checkbox'].includes(fieldForm.fieldType) && (
@@ -760,17 +761,17 @@ export const SettingsPage = () => {
         }
       >
         <form onSubmit={handleSaveTemplate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Channel Type *</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={templateForm.type}
                 onChange={(e) => setTemplateForm({ ...templateForm, type: e.target.value })}
-              >
-                <option value="whatsapp">1-Click WhatsApp</option>
-                <option value="email">Nodemailer Email</option>
-              </select>
+                options={[
+                  { value: 'whatsapp', label: '1-Click WhatsApp' },
+                  { value: 'email', label: 'Nodemailer Email' },
+                ]}
+              />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Template Title *</label>

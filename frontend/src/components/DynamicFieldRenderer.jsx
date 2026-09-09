@@ -1,19 +1,23 @@
 import React from 'react';
+import CustomSelect from './CustomSelect';
 
 export const DynamicFieldRenderer = ({ fields = [], values = {}, onChange, disabled = false }) => {
-  if (!fields || fields.length === 0) return null;
+  const safeFields = Array.isArray(fields) ? fields : [];
+  const safeValues = values || {};
+
+  if (safeFields.length === 0) return null;
 
   const handleFieldChange = (fieldName, val) => {
     onChange({
-      ...values,
+      ...safeValues,
       [fieldName]: val,
     });
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {fields.map((field) => {
-        const val = values[field.fieldName] ?? '';
+      {safeFields.map((field) => {
+        const val = safeValues[field.fieldName] ?? '';
 
         return (
           <div key={field._id || field.fieldName} className="form-group" style={{ margin: 0 }}>
@@ -74,20 +78,16 @@ export const DynamicFieldRenderer = ({ fields = [], values = {}, onChange, disab
 
             {/* Field Type: Select Dropdown */}
             {field.fieldType === 'select' && (
-              <select
-                className="form-select"
+              <CustomSelect
                 value={val}
-                required={field.isRequired}
                 disabled={disabled}
+                placeholder={`-- Select ${field.fieldLabel} --`}
                 onChange={(e) => handleFieldChange(field.fieldName, e.target.value)}
-              >
-                <option value="">-- Select {field.fieldLabel} --</option>
-                {field.options?.map((opt, idx) => (
-                  <option key={idx} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: '', label: `-- Select ${field.fieldLabel} --` },
+                  ...(field.options || []).map((opt) => ({ value: opt, label: opt })),
+                ]}
+              />
             )}
 
             {/* Field Type: Radio */}

@@ -8,6 +8,10 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('zokep_token') || null);
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+  const closeSidebar = () => setSidebarOpen(false);
 
   // Load user profile on initial app load with 0ms instant cache hydration
   useEffect(() => {
@@ -110,6 +114,10 @@ export const AuthProvider = ({ children }) => {
         registerAdmin,
         refreshMe,
         logout,
+        sidebarOpen,
+        setSidebarOpen,
+        toggleSidebar,
+        closeSidebar,
         isAuthenticated: !!user,
         isSuperAdmin: user?.role === 'super_admin',
         isAdmin: user?.role === 'admin',

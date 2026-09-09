@@ -145,7 +145,7 @@ export const AdminDashboard = () => {
         </div>
 
         {/* Lead Graph & Analytics Section */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))', gap: '24px', marginBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(290px, 1fr))', gap: '20px', marginBottom: '28px' }}>
           {/* Chart 1: 14-Day Lead Trends & Deals Won */}
           <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

@@ -32,6 +32,8 @@ import Badge from '../../components/Badge';
 import DynamicFieldRenderer from '../../components/DynamicFieldRenderer';
 import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
+import WhatsAppIcon from '../../components/WhatsAppIcon';
+import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatDateTime } from '../../utils/date';
@@ -107,9 +109,9 @@ export const LeadManagementPage = () => {
         api.get('/admin/staff'),
         api.get('/settings/custom-fields'),
       ]);
-      if (statusRes.success) setStatuses(statusRes.data);
-      if (staffRes.success) setStaffList(staffRes.data);
-      if (fieldsRes.success) setCustomFields(fieldsRes.data);
+      if (statusRes && statusRes.success && Array.isArray(statusRes.data)) setStatuses(statusRes.data);
+      if (staffRes && staffRes.success && Array.isArray(staffRes.data)) setStaffList(staffRes.data);
+      if (fieldsRes && fieldsRes.success && Array.isArray(fieldsRes.data)) setCustomFields(fieldsRes.data);
     } catch (err) {
       console.warn('Metadata load error:', err.message);
     }
@@ -125,11 +127,14 @@ export const LeadManagementPage = () => {
         source: sourceFilter,
         priority: priorityFilter,
       });
-      if (res.success) {
+      if (res && res.success && Array.isArray(res.data)) {
         setLeads(res.data);
+      } else {
+        setLeads([]);
       }
     } catch (err) {
       error(err.message || 'Failed to fetch leads');
+      setLeads([]);
     } finally {
       setLoading(false);
     }
@@ -275,7 +280,8 @@ export const LeadManagementPage = () => {
     }
   };
 
-  const handleDeleteLead = async (id) => {
+  const handleDeleteLead = async (id, e) => {
+    if (e && e.currentTarget) e.currentTarget.blur();
     if (!window.confirm('Are you sure you want to permanently delete this lead?')) return;
     try {
       const res = await api.delete(`/leads/${id}`);
@@ -408,49 +414,51 @@ export const LeadManagementPage = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Status Filter */}
-            <select
-              className="form-select"
-              style={{ width: '160px' }}
+            <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              {statuses.map((st) => (
-                <option key={st._id} value={st._id}>
-                  {st.name}
-                </option>
-              ))}
-            </select>
+              placeholder="All Statuses"
+              style={{ width: '160px' }}
+              options={[
+                { value: '', label: 'All Statuses' },
+                ...statuses.map((st) => ({
+                  value: st._id,
+                  label: st.name,
+                  color: st.color,
+                })),
+              ]}
+            />
 
             {/* Staff Filter */}
-            <select
-              className="form-select"
-              style={{ width: '160px' }}
+            <CustomSelect
               value={assigneeFilter}
               onChange={(e) => setAssigneeFilter(e.target.value)}
-            >
-              <option value="">All Team Members</option>
-              <option value="unassigned">Unassigned Only</option>
-              {staffList.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              placeholder="All Team Members"
+              style={{ width: '160px' }}
+              options={[
+                { value: '', label: 'All Team Members' },
+                { value: 'unassigned', label: 'Unassigned Only' },
+                ...staffList.map((s) => ({
+                  value: s.id || s._id,
+                  label: s.name,
+                })),
+              ]}
+            />
 
             {/* Priority Filter */}
-            <select
-              className="form-select"
-              style={{ width: '130px' }}
+            <CustomSelect
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
-            >
-              <option value="">All Priority</option>
-              <option value="urgent">Urgent</option>
-              <option value="high">High</option>
-              <option value="medium">Medium</option>
-              <option value="low">Low</option>
-            </select>
+              placeholder="All Priority"
+              style={{ width: '130px' }}
+              options={[
+                { value: '', label: 'All Priority' },
+                { value: 'urgent', label: 'Urgent' },
+                { value: 'high', label: 'High' },
+                { value: 'medium', label: 'Medium' },
+                { value: 'low', label: 'Low' },
+              ]}
+            />
 
             {/* View Toggle */}
             <div style={{ display: 'flex', background: 'var(--bg-surface-elevated)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border-medium)' }}>
@@ -555,27 +563,21 @@ export const LeadManagementPage = () => {
                           </span>
                         </td>
                         <td>
-                          <select
-                            className="form-select"
-                            style={{
-                              fontSize: '12px',
-                              padding: '4px 8px',
-                              height: 'auto',
-                              minWidth: '130px',
-                              background: 'var(--bg-surface)',
-                              borderRadius: '6px',
-                            }}
+                          <CustomSelect
                             value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
                             onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                            placeholder="-- Unassigned --"
+                            showArrow={true}
+                            style={{ minWidth: '130px' }}
                             title="Assign to staff member"
-                          >
-                            <option value="">-- Unassigned --</option>
-                            {staffList.map((s) => (
-                              <option key={s._id || s.id} value={s._id || s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
+                            options={[
+                              { value: '', label: '-- Unassigned --' },
+                              ...staffList.map((s) => ({
+                                value: s._id || s.id,
+                                label: s.name,
+                              })),
+                            ]}
+                          />
                         </td>
                         <td>
                           {lead.nextFollowupDate ? (
@@ -591,10 +593,10 @@ export const LeadManagementPage = () => {
                             {/* Edit Lead */}
                             <button
                               onClick={() => openEditLeadModal(lead)}
-                              className="btn btn-secondary btn-sm"
+                              className="btn btn-secondary btn-action"
                               title="Edit Lead Information"
                             >
-                              <Edit2 size={13} />
+                              <Edit2 size={15} color="#003865" />
                             </button>
 
                             {/* 1-Click WhatsApp */}
@@ -606,8 +608,8 @@ export const LeadManagementPage = () => {
                               className="btn btn-whatsapp btn-sm"
                               title="1-Click WhatsApp"
                             >
-                              <MessageSquare size={13} />
-                              WA
+                              <WhatsAppIcon size={14} color="#ffffff" />
+                              <span>WA</span>
                             </button>
 
                             {/* 1-Click Email */}
@@ -617,10 +619,10 @@ export const LeadManagementPage = () => {
                                   setQuickActionLead(lead);
                                   setEmailModalOpen(true);
                                 }}
-                                className="btn btn-secondary btn-sm"
-                                title="1-Click Nodemailer Email"
+                                className="btn btn-secondary btn-action"
+                                title="1-Click Email"
                               >
-                                <Mail size={13} />
+                                <Mail size={15} color="#0284c7" />
                               </button>
                             )}
 
@@ -628,29 +630,29 @@ export const LeadManagementPage = () => {
                             {!lead.isConverted && (
                               <button
                                 onClick={() => handleConvertToCustomer(lead)}
-                                className="btn btn-success btn-sm"
-                                title="Convert to Customer"
+                                className="btn btn-success btn-action"
+                                title="Convert to Customer Deal"
                               >
-                                <UserCheck size={13} />
+                                <UserCheck size={15} color="#ffffff" />
                               </button>
                             )}
 
                             {/* Details */}
                             <button
                               onClick={() => openLeadDetails(lead)}
-                              className="btn btn-secondary btn-sm"
-                              title="Open Details & Timeline"
+                              className="btn btn-secondary btn-action"
+                              title="Open Details & Activity Log"
                             >
-                              <ExternalLink size={13} />
+                              <ExternalLink size={15} color="#475569" />
                             </button>
 
                             {/* Delete */}
                             <button
-                              onClick={() => handleDeleteLead(lead._id)}
-                              className="btn btn-danger btn-sm"
+                              onClick={(e) => handleDeleteLead(lead._id, e)}
+                              className="btn btn-danger btn-action"
                               title="Delete Lead"
                             >
-                              <Trash2 size={13} />
+                              <Trash2 size={15} />
                             </button>
                           </div>
                         </td>
@@ -728,21 +730,21 @@ export const LeadManagementPage = () => {
                           >
                             {status.name}
                           </span>
-                          <select
-                            className="form-select"
-                            style={{ fontSize: '11px', padding: '2px 4px', height: 'auto', maxWidth: '110px' }}
-                            value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
-                            title="Assign to staff"
-                          >
-                            <option value="">-- Unassigned --</option>
-                            {staffList.map((s) => (
-                              <option key={s._id || s.id} value={s._id || s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                          </select>
+                          <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '140px' }}>
+                            <CustomSelect
+                              value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
+                              onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                              placeholder="-- Unassigned --"
+                              title="Assign to staff"
+                              options={[
+                                { value: '', label: '-- Unassigned --' },
+                                ...staffList.map((s) => ({
+                                  value: s._id || s.id,
+                                  label: s.name,
+                                })),
+                              ]}
+                            />
+                          </div>
                           {lead.isConverted && <span style={{ color: '#10b981', fontWeight: 700 }}>Won 🎉</span>}
                         </div>
                       </div>
@@ -774,7 +776,7 @@ export const LeadManagementPage = () => {
       >
         <form onSubmit={handleLeadSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           {/* Base Mandatory Fields */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">
                 Full Name <span style={{ color: '#f43f5e' }}>*</span>
@@ -803,7 +805,7 @@ export const LeadManagementPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Email Address</label>
               <input
@@ -826,7 +828,7 @@ export const LeadManagementPage = () => {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Potential Deal Value (₹)</label>
               <input
@@ -839,52 +841,49 @@ export const LeadManagementPage = () => {
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Lead Priority</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={leadForm.priority}
                 onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value })}
-              >
-                <option value="low">Low Priority</option>
-                <option value="medium">Medium</option>
-                <option value="high">High Priority</option>
-                <option value="urgent">Urgent 🔥</option>
-              </select>
+                options={[
+                  { value: 'low', label: 'Low Priority' },
+                  { value: 'medium', label: 'Medium' },
+                  { value: 'high', label: 'High Priority' },
+                  { value: 'urgent', label: 'Urgent 🔥' },
+                ]}
+              />
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Assign to Staff Member</label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={leadForm.assignedTo}
                 onChange={(e) => setLeadForm({ ...leadForm, assignedTo: e.target.value })}
-              >
-                <option value="">-- Unassigned --</option>
-                {staffList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.email})
-                  </option>
-                ))}
-              </select>
+                placeholder="-- Unassigned --"
+                options={[
+                  { value: '', label: '-- Unassigned --' },
+                  ...staffList.map((s) => ({
+                    value: s.id || s._id,
+                    label: `${s.name} (${s.email})`,
+                  })),
+                ]}
+              />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">
                 Pipeline Stage / Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
               </label>
-              <select
-                className="form-select"
+              <CustomSelect
                 value={leadForm.statusId}
                 disabled={true}
-                style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-card)' }}
                 title="Pipeline status can only be updated by Sales Staff"
-              >
-                {statuses.map((st) => (
-                  <option key={st._id} value={st._id}>
-                    {st.name}
-                  </option>
-                ))}
-              </select>
+                options={statuses.map((st) => ({
+                  value: st._id,
+                  label: st.name,
+                  color: st.color,
+                }))}
+              />
             </div>
           </div>
 
@@ -958,12 +957,27 @@ export const LeadManagementPage = () => {
                     <Badge color="#10b981">Won Customer 🎉</Badge>
                   )}
                 </div>
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  📞 {activeLead.phone} {activeLead.email && `• ✉️ ${activeLead.email}`} {activeLead.company && `• 🏢 ${activeLead.company}`}
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <Phone size={13} color="var(--primary-500)" />
+                    {activeLead.phone}
+                  </span>
+                  {activeLead.email && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Mail size={13} color="#0284c7" />
+                      {activeLead.email}
+                    </span>
+                  )}
+                  {activeLead.company && (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Building2 size={13} color="var(--text-muted)" />
+                      {activeLead.company}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => {
                     setQuickActionLead(activeLead);
@@ -971,8 +985,8 @@ export const LeadManagementPage = () => {
                   }}
                   className="btn btn-whatsapp btn-sm"
                 >
-                  <MessageSquare size={14} />
-                  WhatsApp
+                  <WhatsAppIcon size={14} color="#ffffff" />
+                  <span>WhatsApp</span>
                 </button>
                 {activeLead.email && (
                   <button
@@ -980,10 +994,10 @@ export const LeadManagementPage = () => {
                       setQuickActionLead(activeLead);
                       setEmailModalOpen(true);
                     }}
-                    className="btn btn-secondary btn-sm"
+                    className="btn btn-email btn-sm"
                   >
-                    <Mail size={14} />
-                    Email
+                    <Mail size={14} color="#ffffff" />
+                    <span>Email</span>
                   </button>
                 )}
                 {!activeLead.isConverted && (
@@ -1023,19 +1037,19 @@ export const LeadManagementPage = () => {
                 <User size={16} color="var(--primary-400)" />
                 <span style={{ fontSize: '13px', fontWeight: 600 }}>Assigned Consultant:</span>
               </div>
-              <select
-                className="form-select"
-                style={{ maxWidth: '220px', fontSize: '13px', padding: '4px 8px' }}
+              <CustomSelect
                 value={activeLead.assignedTo?._id || activeLead.assignedTo?.id || (typeof activeLead.assignedTo === 'string' ? activeLead.assignedTo : '')}
                 onChange={(e) => handleQuickReassign(activeLead._id, e.target.value)}
-              >
-                <option value="">-- Unassigned --</option>
-                {staffList.map((s) => (
-                  <option key={s._id || s.id} value={s._id || s.id}>
-                    {s.name} ({s.email})
-                  </option>
-                ))}
-              </select>
+                placeholder="-- Unassigned --"
+                style={{ width: '220px' }}
+                options={[
+                  { value: '', label: '-- Unassigned --' },
+                  ...staffList.map((s) => ({
+                    value: s._id || s.id,
+                    label: `${s.name} (${s.email})`,
+                  })),
+                ]}
+              />
             </div>
 
             {/* Log Followup & Update Status Section */}
@@ -1043,24 +1057,21 @@ export const LeadManagementPage = () => {
               <h4 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '10px' }}>
                 Log Follow-up & Update Pipeline Status
               </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+              <div className="form-grid-2" style={{ marginBottom: '10px' }}>
                 <div>
                   <label className="form-label">
                     Update Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
                   </label>
-                  <select
-                    className="form-select"
+                  <CustomSelect
                     value={newStatusId}
                     disabled={true}
-                    style={{ opacity: 0.7, cursor: 'not-allowed', backgroundColor: 'var(--bg-card)' }}
                     title="Pipeline status can only be updated by Sales Staff"
-                  >
-                    {statuses.map((st) => (
-                      <option key={st._id} value={st._id}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
+                    options={statuses.map((st) => ({
+                      value: st._id,
+                      label: st.name,
+                      color: st.color,
+                    }))}
+                  />
                 </div>
                 <div>
                   <label className="form-label">Next Follow-up Date</label>
@@ -1165,20 +1176,30 @@ export const LeadManagementPage = () => {
       </Modal>
 
       {/* 1-CLICK WHATSAPP MODAL */}
-      <WhatsAppModal
-        isOpen={whatsAppModalOpen}
-        onClose={() => setWhatsAppModalOpen(false)}
-        lead={quickActionLead}
-        onFollowupSuccess={fetchLeads}
-      />
+      {quickActionLead && (
+        <WhatsAppModal
+          isOpen={whatsAppModalOpen}
+          onClose={() => {
+            setWhatsAppModalOpen(false);
+            setQuickActionLead(null);
+          }}
+          lead={quickActionLead}
+          onFollowupSuccess={fetchLeads}
+        />
+      )}
 
       {/* 1-CLICK EMAIL (NODEMAILER) MODAL */}
-      <EmailModal
-        isOpen={emailModalOpen}
-        onClose={() => setEmailModalOpen(false)}
-        lead={quickActionLead}
-        onEmailSuccess={fetchLeads}
-      />
+      {quickActionLead && (
+        <EmailModal
+          isOpen={emailModalOpen}
+          onClose={() => {
+            setEmailModalOpen(false);
+            setQuickActionLead(null);
+          }}
+          lead={quickActionLead}
+          onEmailSuccess={fetchLeads}
+        />
+      )}
     </div>
   );
 };

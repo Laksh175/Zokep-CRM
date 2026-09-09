@@ -118,7 +118,7 @@ export const SubscriptionPlanPage = () => {
             Upgrade anytime with secure Razorpay payment.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '20px' }}>
             {plans.map((plan) => {
               const isCurrentPlan = current?.plan?._id === plan._id;
 

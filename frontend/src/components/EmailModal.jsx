@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mail, Send, Check } from 'lucide-react';
 import Modal from './Modal';
+import CustomSelect from './CustomSelect';
 import api from '../services/api';
 import { useToast } from '../context/ToastContext';
 import { useAuth } from '../context/AuthContext';
@@ -118,17 +119,14 @@ export const EmailModal = ({ isOpen, onClose, lead, onEmailSuccess }) => {
         {templates.length > 0 && (
           <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Choose Email Template</label>
-            <select
-              className="form-select"
+            <CustomSelect
               value={selectedTemplateId}
               onChange={(e) => handleTemplateChange(e.target.value)}
-            >
-              {templates.map((tpl) => (
-                <option key={tpl._id} value={tpl._id}>
-                  {tpl.title}
-                </option>
-              ))}
-            </select>
+              options={templates.map((tpl) => ({
+                value: tpl._id,
+                label: tpl.title,
+              }))}
+            />
           </div>
         )}
 
