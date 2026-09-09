@@ -14,8 +14,8 @@ export const IndustriesPage = () => {
       name: 'Real Estate & Builders',
       shortName: 'Real Estate',
       icon: Building2,
-      accentColor: '#8b5cf6',
-      badgeBg: 'rgba(139, 92, 246, 0.12)',
+      accentColor: '#00a651',
+      badgeBg: 'rgba(0, 166, 81, 0.1)',
       tag: 'REAL ESTATE & INFRASTRUCTURE PRESET',
       tenantName: 'Skyline Luxury Infra & Builders',
       activePlan: 'Growth Active Plan',
@@ -23,11 +23,11 @@ export const IndustriesPage = () => {
       description:
         'Never lose high-value property buyers in messy WhatsApp chats or spreadsheets. Zokep CRM automatically captures buyer inquiries from Meta Ads, 99acres & Magicbricks, organizes site visits, and equips sales agents with 1-click WhatsApp location dispatch.',
       stages: [
-        { name: 'Inquiry Inbound', color: '#3b82f6', count: 48, pct: '32%' },
-        { name: 'Site Visit Scheduled', color: '#8b5cf6', count: 28, pct: '19%' },
-        { name: 'Site Visit Completed', color: '#f59e0b', count: 18, pct: '12%' },
-        { name: 'Token Received', color: '#06b6d4', count: 8, pct: '5%' },
-        { name: 'Agreement Signed', color: '#10b981', count: 6, pct: '4%' },
+        { name: 'Inquiry Inbound', color: '#003865', count: 48, pct: '32%' },
+        { name: 'Site Visit Scheduled', color: '#1d72b8', count: 28, pct: '19%' },
+        { name: 'Site Visit Completed', color: '#00a651', count: 18, pct: '12%' },
+        { name: 'Token Received', color: '#10b981', count: 8, pct: '5%' },
+        { name: 'Agreement Signed', color: '#34d399', count: 6, pct: '4%' },
       ],
       adminStats: {
         totalLeads: '148',
@@ -42,10 +42,10 @@ export const IndustriesPage = () => {
         conversionRate: '28.4% overall conversion rate',
       },
       leadSources: [
-        { channel: 'Meta & 99acres Portal Ads', pct: 46, count: '68 Leads', color: '#3b82f6' },
+        { channel: 'Meta & 99acres Portal Ads', pct: 46, count: '68 Leads', color: '#003865' },
         { channel: '1-Click WhatsApp Inquiries', pct: 32, count: '47 Leads', color: '#00a651' },
-        { channel: 'Website Embed Forms', pct: 15, count: '22 Leads', color: '#8b5cf6' },
-        { channel: 'Walk-in & Investor Referrals', pct: 7, count: '11 Leads', color: '#f59e0b' },
+        { channel: 'Website Embed Forms', pct: 15, count: '22 Leads', color: '#1d72b8' },
+        { channel: 'Walk-in & Investor Referrals', pct: 7, count: '11 Leads', color: '#10b981' },
       ],
       leaderboard: [
         { name: 'Rohit Verma', assigned: 48, converted: 16, winRate: '33.3%', dealValue: '₹1.85 Cr' },
@@ -53,9 +53,9 @@ export const IndustriesPage = () => {
         { name: 'Aman Saxena', assigned: 28, converted: 8, winRate: '28.5%', dealValue: '₹95 Lakhs' },
       ],
       upcomingFollowups: [
-        { title: 'Site visit for 3BHK Penthouse', client: 'Amitabh Sen (+91 98201 44552)', time: 'Today, 3:30 PM', badge: 'High Priority', color: '#e11d48' },
-        { title: 'Token receipt balance follow-up', client: 'Pooja Agarwal (+91 98451 22890)', time: 'Tomorrow, 11:00 AM', badge: 'Closing Stage', color: '#10b981' },
-        { title: 'Agreement draft review with legal', client: 'Rajesh Nair (+91 97110 33499)', time: 'Friday, 2:00 PM', badge: 'Documentation', color: '#8b5cf6' },
+        { title: 'Site visit for 3BHK Penthouse', client: 'Amitabh Sen (+91 98201 44552)', time: 'Today, 3:30 PM', badge: 'High Priority', color: '#003865' },
+        { title: 'Token receipt balance follow-up', client: 'Pooja Agarwal (+91 98451 22890)', time: 'Tomorrow, 11:00 AM', badge: 'Closing Stage', color: '#00a651' },
+        { title: 'Agreement draft review with legal', client: 'Rajesh Nair (+91 97110 33499)', time: 'Friday, 2:00 PM', badge: 'Documentation', color: '#1d72b8' },
       ],
       customFields: [
         { label: 'Property Type', type: 'Dropdown', value: '2 BHK, 3 BHK Luxury, Penthouse, Villa' },
@@ -70,7 +70,7 @@ export const IndustriesPage = () => {
         dealValue: '₹1.85 Cr',
         details: 'Looking for: 3 BHK Luxury • Indiranagar • East Facing • Ready to Move',
         badge: 'Site Visit Scheduled',
-        badgeColor: '#8b5cf6',
+        badgeColor: '#00a651',
         actionLabel: '1-Click WhatsApp Site Visit Pin',
       },
       highlights: [
@@ -84,8 +84,8 @@ export const IndustriesPage = () => {
       name: 'Manufacturing & B2B',
       shortName: 'Manufacturing',
       icon: Factory,
-      accentColor: '#f59e0b',
-      badgeBg: 'rgba(245, 158, 11, 0.12)',
+      accentColor: '#003865',
+      badgeBg: 'rgba(0, 56, 101, 0.1)',
       tag: 'MANUFACTURING & INDUSTRIAL B2B PRESET',
       tenantName: 'Apex Industrial Precision Works Ltd',
       activePlan: 'Enterprise Active Plan',
@@ -93,11 +93,11 @@ export const IndustriesPage = () => {
       description:
         'Industrial sales involve complex specs, tonnage requirements, and multiple stakeholder reviews. Zokep CRM tracks custom technical parameters, sample dispatch logistics, and triggers formal PDF quotations with Nodemailer.',
       stages: [
-        { name: 'RFQ Received', color: '#3b82f6', count: 34, pct: '38%' },
-        { name: 'Technical Review', color: '#8b5cf6', count: 18, pct: '20%' },
-        { name: 'Sample Dispatched', color: '#f59e0b', count: 12, pct: '13%' },
-        { name: 'Quotation Sent', color: '#06b6d4', count: 14, pct: '15%' },
-        { name: 'PO Approved', color: '#10b981', count: 8, pct: '9%' },
+        { name: 'RFQ Received', color: '#003865', count: 34, pct: '38%' },
+        { name: 'Technical Review', color: '#1d72b8', count: 18, pct: '20%' },
+        { name: 'Sample Dispatched', color: '#00a651', count: 12, pct: '13%' },
+        { name: 'Quotation Sent', color: '#10b981', count: 14, pct: '15%' },
+        { name: 'PO Approved', color: '#34d399', count: 8, pct: '9%' },
       ],
       adminStats: {
         totalLeads: '86',
@@ -112,10 +112,10 @@ export const IndustriesPage = () => {
         conversionRate: '31.2% overall conversion rate',
       },
       leadSources: [
-        { channel: 'Direct RFQ Inbound & Indiamart', pct: 52, count: '45 RFQs', color: '#3b82f6' },
+        { channel: 'Direct RFQ Inbound & Indiamart', pct: 52, count: '45 RFQs', color: '#003865' },
         { channel: 'WhatsApp Specification Enquiries', pct: 28, count: '24 RFQs', color: '#00a651' },
-        { channel: 'Website Technical Forms', pct: 14, count: '12 RFQs', color: '#f59e0b' },
-        { channel: 'Distributor Network', pct: 6, count: '5 RFQs', color: '#8b5cf6' },
+        { channel: 'Website Technical Forms', pct: 14, count: '12 RFQs', color: '#1d72b8' },
+        { channel: 'Distributor Network', pct: 6, count: '5 RFQs', color: '#10b981' },
       ],
       leaderboard: [
         { name: 'Vikram Joshi', assigned: 34, converted: 12, winRate: '35.2%', dealValue: '₹22.4 Lakhs' },
@@ -123,8 +123,8 @@ export const IndustriesPage = () => {
         { name: 'Kunal Mehra', assigned: 18, converted: 5, winRate: '27.7%', dealValue: '₹8.5 Lakhs' },
       ],
       upcomingFollowups: [
-        { title: 'Send revised CNC Turned specs', client: 'Precision Auto (+91 99887 66550)', time: 'Today, 2:00 PM', badge: 'Technical Specs', color: '#f59e0b' },
-        { title: 'Sample batch dispatch verification', client: 'Bharat Hydraulics (+91 98220 11944)', time: 'Tomorrow, 10:30 AM', badge: 'BlueDart Tracking', color: '#06b6d4' },
+        { title: 'Send revised CNC Turned specs', client: 'Precision Auto (+91 99887 66550)', time: 'Today, 2:00 PM', badge: 'Technical Specs', color: '#003865' },
+        { title: 'Sample batch dispatch verification', client: 'Bharat Hydraulics (+91 98220 11944)', time: 'Tomorrow, 10:30 AM', badge: 'BlueDart Tracking', color: '#00a651' },
         { title: 'PO delivery schedule sign-off', client: 'Kirloskar Ancillary (+91 98190 77610)', time: 'Thursday, 4:00 PM', badge: 'PO Closing', color: '#10b981' },
       ],
       customFields: [
@@ -140,7 +140,7 @@ export const IndustriesPage = () => {
         dealValue: '₹8.50 Lakhs',
         details: 'Qty: 5,000 Units • Custom CNC Turned Parts • Material: SS 316',
         badge: 'Sample Dispatched',
-        badgeColor: '#f59e0b',
+        badgeColor: '#003865',
         actionLabel: 'Send PDF Quotation via Nodemailer',
       },
       highlights: [
@@ -155,7 +155,7 @@ export const IndustriesPage = () => {
       shortName: 'Agencies & IT',
       icon: Briefcase,
       accentColor: '#00a651',
-      badgeBg: 'rgba(0, 166, 81, 0.12)',
+      badgeBg: 'rgba(0, 166, 81, 0.1)',
       tag: 'DIGITAL AGENCIES & IT CONSULTING PRESET',
       tenantName: 'Vanguard Digital & Cloud Solutions',
       activePlan: 'Growth Active Plan',
@@ -163,11 +163,11 @@ export const IndustriesPage = () => {
       description:
         'Whether you sell web development, performance marketing, or enterprise software, Zokep CRM ensures inbound inquiries from your website and ads are immediately assigned to account executives with custom project scope tracking.',
       stages: [
-        { name: 'Lead Inbound', color: '#3b82f6', count: 32, pct: '36%' },
-        { name: 'Discovery Call', color: '#8b5cf6', count: 16, pct: '18%' },
-        { name: 'Proposal / SOW Sent', color: '#f59e0b', count: 12, pct: '14%' },
-        { name: 'Contract Negotiation', color: '#06b6d4', count: 6, pct: '7%' },
-        { name: 'Retainer Won', color: '#10b981', count: 10, pct: '11%' },
+        { name: 'Lead Inbound', color: '#003865', count: 32, pct: '36%' },
+        { name: 'Discovery Call', color: '#1d72b8', count: 16, pct: '18%' },
+        { name: 'Proposal / SOW Sent', color: '#00a651', count: 12, pct: '14%' },
+        { name: 'Contract Negotiation', color: '#10b981', count: 6, pct: '7%' },
+        { name: 'Retainer Won', color: '#34d399', count: 10, pct: '11%' },
       ],
       adminStats: {
         totalLeads: '76',
@@ -182,10 +182,10 @@ export const IndustriesPage = () => {
         conversionRate: '34.8% overall conversion rate',
       },
       leadSources: [
-        { channel: 'Meta & Google Ad Inquiries', pct: 48, count: '36 Inquiries', color: '#3b82f6' },
+        { channel: 'Meta & Google Ad Inquiries', pct: 48, count: '36 Inquiries', color: '#003865' },
         { channel: 'WhatsApp Direct Consults', pct: 26, count: '20 Inquiries', color: '#00a651' },
-        { channel: 'Agency Landing Page iFrame', pct: 18, count: '14 Inquiries', color: '#8b5cf6' },
-        { channel: 'Client Word-of-Mouth', pct: 8, count: '6 Inquiries', color: '#f59e0b' },
+        { channel: 'Agency Landing Page iFrame', pct: 18, count: '14 Inquiries', color: '#1d72b8' },
+        { channel: 'Client Word-of-Mouth', pct: 8, count: '6 Inquiries', color: '#10b981' },
       ],
       leaderboard: [
         { name: 'Rohit Verma', assigned: 32, converted: 12, winRate: '37.5%', dealValue: '₹8.4 Lakhs' },
@@ -193,7 +193,7 @@ export const IndustriesPage = () => {
         { name: 'Priya Iyer', assigned: 18, converted: 5, winRate: '27.7%', dealValue: '₹4.2 Lakhs' },
       ],
       upcomingFollowups: [
-        { title: 'Discovery call for FinTech App', client: 'FinTech Mobile App (+91 97120 11998)', time: 'Today, 4:00 PM', badge: 'Zoom Call', color: '#8b5cf6' },
+        { title: 'Discovery call for FinTech App', client: 'FinTech Mobile App (+91 97120 11998)', time: 'Today, 4:00 PM', badge: 'Zoom Call', color: '#003865' },
         { title: 'Deliver Meta Ads CPA audit deck', client: 'HealthTech D2C (+91 98114 66720)', time: 'Tomorrow, 12:00 PM', badge: 'Audit Deck', color: '#00a651' },
         { title: 'SOW signature and kickoff prep', client: 'EdTech Portal (+91 98402 88190)', time: 'Monday, 11:00 AM', badge: 'Contract', color: '#10b981' },
       ],
@@ -224,8 +224,8 @@ export const IndustriesPage = () => {
       name: 'Education & Coaching',
       shortName: 'Education',
       icon: GraduationCap,
-      accentColor: '#0284c7',
-      badgeBg: 'rgba(2, 132, 199, 0.12)',
+      accentColor: '#003865',
+      badgeBg: 'rgba(0, 56, 101, 0.1)',
       tag: 'EDUCATION & EDTECH INSTITUTES PRESET',
       tenantName: 'NextGen Academy & Training Hub',
       activePlan: 'Growth Active Plan',
@@ -233,11 +233,11 @@ export const IndustriesPage = () => {
       description:
         'Handle high-volume student inquiries during admission seasons effortlessly. Track prospective students, schedule demo classes, send course brochures on WhatsApp, and manage seat confirmations without losing track.',
       stages: [
-        { name: 'Inquiry Received', color: '#3b82f6', count: 85, pct: '40%' },
-        { name: 'Counseling Scheduled', color: '#8b5cf6', count: 42, pct: '20%' },
-        { name: 'Demo Class Attended', color: '#f59e0b', count: 32, pct: '15%' },
-        { name: 'Seat Reserved', color: '#06b6d4', count: 24, pct: '11%' },
-        { name: 'Admission Confirmed', color: '#10b981', count: 28, pct: '13%' },
+        { name: 'Inquiry Received', color: '#003865', count: 85, pct: '40%' },
+        { name: 'Counseling Scheduled', color: '#1d72b8', count: 42, pct: '20%' },
+        { name: 'Demo Class Attended', color: '#00a651', count: 32, pct: '15%' },
+        { name: 'Seat Reserved', color: '#10b981', count: 24, pct: '11%' },
+        { name: 'Admission Confirmed', color: '#34d399', count: 28, pct: '13%' },
       ],
       adminStats: {
         totalLeads: '211',
@@ -252,10 +252,10 @@ export const IndustriesPage = () => {
         conversionRate: '29.5% overall conversion rate',
       },
       leadSources: [
-        { channel: 'Instagram & YouTube Ad Drives', pct: 54, count: '114 Students', color: '#3b82f6' },
+        { channel: 'Instagram & YouTube Ad Drives', pct: 54, count: '114 Students', color: '#003865' },
         { channel: 'WhatsApp Syllabus Downloads', pct: 28, count: '59 Students', color: '#00a651' },
-        { channel: 'Website Admission Form', pct: 12, count: '25 Students', color: '#0284c7' },
-        { channel: 'Student Alumni Referrals', pct: 6, count: '13 Students', color: '#8b5cf6' },
+        { channel: 'Website Admission Form', pct: 12, count: '25 Students', color: '#1d72b8' },
+        { channel: 'Student Alumni Referrals', pct: 6, count: '13 Students', color: '#10b981' },
       ],
       leaderboard: [
         { name: 'Pooja Iyer', assigned: 64, converted: 22, winRate: '34.3%', dealValue: '₹8.8 Lakhs' },
@@ -263,8 +263,8 @@ export const IndustriesPage = () => {
         { name: 'Sanjay Dutt', assigned: 42, converted: 11, winRate: '26.1%', dealValue: '₹4.4 Lakhs' },
       ],
       upcomingFollowups: [
-        { title: 'Zoom Data Science demo session link', client: 'Rohan Verma (+91 98450 12345)', time: 'Today, 5:00 PM', badge: 'Demo Session', color: '#0284c7' },
-        { title: 'Seat reservation fee verification', client: 'Ananya Deshmukh (+91 98233 44109)', time: 'Tomorrow, 10:00 AM', badge: 'Seat Token', color: '#06b6d4' },
+        { title: 'Zoom Data Science demo session link', client: 'Rohan Verma (+91 98450 12345)', time: 'Today, 5:00 PM', badge: 'Demo Session', color: '#003865' },
+        { title: 'Seat reservation fee verification', client: 'Ananya Deshmukh (+91 98233 44109)', time: 'Tomorrow, 10:00 AM', badge: 'Seat Token', color: '#00a651' },
         { title: 'LMS credentials & batch onboarding', client: 'Kavita Sundaram (+91 98840 55192)', time: 'Saturday, 11:30 AM', badge: 'Onboarding', color: '#10b981' },
       ],
       customFields: [
@@ -280,7 +280,7 @@ export const IndustriesPage = () => {
         dealValue: '₹65,000',
         details: 'Course: Data Science Masterclass • Weekend Batch • Needs EMI Option',
         badge: 'Demo Class Attended',
-        badgeColor: '#0284c7',
+        badgeColor: '#00a651',
         actionLabel: '1-Click WhatsApp Zoom Demo Link',
       },
       highlights: [
@@ -294,8 +294,8 @@ export const IndustriesPage = () => {
       name: 'Automobile Dealerships',
       shortName: 'Automobile',
       icon: Car,
-      accentColor: '#e11d48',
-      badgeBg: 'rgba(225, 29, 72, 0.12)',
+      accentColor: '#00a651',
+      badgeBg: 'rgba(0, 166, 81, 0.1)',
       tag: 'AUTOMOBILE & HIGH-TICKET RETAIL PRESET',
       tenantName: 'Metro Wheels Motors & EV Dealership',
       activePlan: 'Growth Active Plan',
@@ -303,11 +303,11 @@ export const IndustriesPage = () => {
       description:
         'Car buyers research for weeks before committing. Zokep CRM empowers sales consultants to log test drive feedback, evaluate used car exchange values, track loan approvals, and close vehicle bookings faster.',
       stages: [
-        { name: 'Showroom / Web Inquiry', color: '#3b82f6', count: 42, pct: '36%' },
-        { name: 'Test Drive Booked', color: '#8b5cf6', count: 24, pct: '21%' },
-        { name: 'Exchange Valuation Done', color: '#f59e0b', count: 16, pct: '14%' },
-        { name: 'Loan Approved', color: '#06b6d4', count: 12, pct: '10%' },
-        { name: 'Vehicle Delivered', color: '#10b981', count: 9, pct: '8%' },
+        { name: 'Showroom / Web Inquiry', color: '#003865', count: 42, pct: '36%' },
+        { name: 'Test Drive Booked', color: '#1d72b8', count: 24, pct: '21%' },
+        { name: 'Exchange Valuation Done', color: '#00a651', count: 16, pct: '14%' },
+        { name: 'Loan Approved', color: '#10b981', count: 12, pct: '10%' },
+        { name: 'Vehicle Delivered', color: '#34d399', count: 9, pct: '8%' },
       ],
       adminStats: {
         totalLeads: '103',
@@ -322,10 +322,10 @@ export const IndustriesPage = () => {
         conversionRate: '27.4% overall conversion rate',
       },
       leadSources: [
-        { channel: 'Meta Ads & Showroom Walk-in', pct: 50, count: '52 Inquiries', color: '#3b82f6' },
+        { channel: 'Meta Ads & Showroom Walk-in', pct: 50, count: '52 Inquiries', color: '#003865' },
         { channel: 'WhatsApp Test Drive Bookings', pct: 30, count: '31 Inquiries', color: '#00a651' },
-        { channel: 'CarWale & Website Portal', pct: 14, count: '14 Inquiries', color: '#e11d48' },
-        { channel: 'Used Car Exchange Leads', pct: 6, count: '6 Inquiries', color: '#f59e0b' },
+        { channel: 'CarWale & Website Portal', pct: 14, count: '14 Inquiries', color: '#1d72b8' },
+        { channel: 'Used Car Exchange Leads', pct: 6, count: '6 Inquiries', color: '#10b981' },
       ],
       leaderboard: [
         { name: 'Rohit Verma', assigned: 38, converted: 12, winRate: '31.5%', dealValue: '₹28.4 Lakhs' },
@@ -333,8 +333,8 @@ export const IndustriesPage = () => {
         { name: 'Sunil Sharma', assigned: 24, converted: 6, winRate: '25.0%', dealValue: '₹14.2 Lakhs' },
       ],
       upcomingFollowups: [
-        { title: 'Home Test drive for Nexon EV', client: 'Priya Nair (+91 97223 88120)', time: 'Today, 4:30 PM', badge: 'Test Drive', color: '#8b5cf6' },
-        { title: 'HDFC Car loan sanction letter review', client: 'Manish Rawat (+91 98100 22390)', time: 'Tomorrow, 11:00 AM', badge: 'Bank Loan', color: '#06b6d4' },
+        { title: 'Home Test drive for Nexon EV', client: 'Priya Nair (+91 97223 88120)', time: 'Today, 4:30 PM', badge: 'Test Drive', color: '#003865' },
+        { title: 'HDFC Car loan sanction letter review', client: 'Manish Rawat (+91 98100 22390)', time: 'Tomorrow, 11:00 AM', badge: 'Bank Loan', color: '#00a651' },
         { title: 'Showroom delivery ceremonial prep', client: 'Sunil Chhabra (+91 98722 99401)', time: 'Friday, 3:00 PM', badge: 'Car Delivery', color: '#10b981' },
       ],
       customFields: [
@@ -348,15 +348,15 @@ export const IndustriesPage = () => {
         company: 'Metro Wheels Auto Hub',
         phone: '+91 97223 88120',
         dealValue: '₹16.80 Lakhs',
-        details: 'Model: Nexon EV Empowered+ • Exchange: 2019 Swift • Test Drive Saturday 11 AM',
+        details: 'Model: Nexon EV Top Trim • Exchange: Swift 2019 • HDFC Loan Approved',
         badge: 'Test Drive Booked',
-        badgeColor: '#e11d48',
-        actionLabel: 'Send Proforma Quotation (Email)',
+        badgeColor: '#00a651',
+        actionLabel: '1-Click WhatsApp Test Drive Booking',
       },
       highlights: [
-        'Used Car Exchange Valuation: Record inspection notes and estimated buy-back value.',
-        'Bank Finance Stage Tracking: Log loan sanction letter status and disbursement milestones.',
-        'Test Drive Reminder SMS/WhatsApp: Automated alerts so potential buyers never miss their slot.',
+        'Test Drive Feedback Logs: Log consultant notes after home or showroom test drives.',
+        'Used Car Exchange Appraisal: Record evaluator values and old vehicle RC details.',
+        'Automated Loan Sanction Status: Track bank approval stages right inside the pipeline.',
       ],
     },
   ];
@@ -417,7 +417,7 @@ export const IndustriesPage = () => {
             }}
           >
             {activeIndustry.name} CRM Workspace. <br />
-            <span style={{ color: activeIndustry.accentColor }}>{activeIndustry.headline}</span>
+            <span className="gradient-text">{activeIndustry.headline}</span>
           </h1>
 
           <p
@@ -656,28 +656,31 @@ export const IndustriesPage = () => {
       </section>
 
       {/* Switch to Another Industry Footer Strip */}
-      <section style={{ padding: '30px 24px 70px', maxWidth: '1240px', margin: '0 auto' }}>
+      <section style={{ padding: 'clamp(20px, 4vw, 30px) clamp(16px, 4vw, 24px) clamp(40px, 6vw, 70px)', maxWidth: '1240px', margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
         <div
           style={{
             background: 'linear-gradient(135deg, #002244 0%, #003865 100%)',
             borderRadius: '20px',
-            padding: '36px 40px',
+            padding: 'clamp(24px, 4vw, 36px) clamp(16px, 4vw, 36px)',
             color: '#ffffff',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '20px',
+            gap: '24px',
+            width: '100%',
+            boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
         >
-          <div>
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div style={{ flex: '1 1 280px', width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#10b981', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               LOOKING FOR ANOTHER VERTICAL?
             </span>
-            <h3 style={{ fontSize: '24px', fontWeight: 800, margin: '8px 0', color: '#ffffff', letterSpacing: '-0.02em' }}>
+            <h3 style={{ fontSize: 'clamp(20px, 4vw, 24px)', fontWeight: 800, margin: '8px 0 14px', color: '#ffffff', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
               Explore other pre-configured industry workflows:
             </h3>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
               {industries
                 .filter((ind) => ind.id !== activeIndustry.id)
                 .map((ind) => (
@@ -687,29 +690,52 @@ export const IndustriesPage = () => {
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
+                      justifyContent: 'space-between',
                       gap: '6px',
-                      padding: '8px 16px',
+                      padding: '10px 14px',
                       borderRadius: '8px',
                       backgroundColor: 'rgba(255, 255, 255, 0.12)',
                       color: '#ffffff',
-                      fontSize: '12px',
+                      fontSize: '12.5px',
                       fontWeight: 600,
                       textDecoration: 'none',
                       transition: 'background 0.15s ease',
                       border: '1px solid rgba(255, 255, 255, 0.15)',
+                      width: '100%',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <span>{ind.name}</span>
-                    <ChevronRight size={13} />
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ind.name}</span>
+                    <ChevronRight size={14} style={{ flexShrink: 0 }} />
                   </Link>
                 ))}
             </div>
           </div>
 
-          <div>
-            <a href="/#pricing" className="btn btn-primary btn-lg" style={{ fontSize: '15px' }}>
-              View Subscription Pricing <ArrowRight size={16} />
-            </a>
+          <div style={{ width: '100%', maxWidth: '100%', flex: '1 1 240px', boxSizing: 'border-box' }}>
+            <Link
+              to="/pricing"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justify: 'center',
+                gap: '8px',
+                padding: '13px 26px',
+                borderRadius: '12px',
+                border: '2px solid #00a651',
+                background: 'rgba(0, 31, 63, 0.85)',
+                color: '#ffffff',
+                fontSize: '15px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                width: '100%',
+                boxSizing: 'border-box',
+                boxShadow: '0 4px 16px rgba(0, 166, 81, 0.22)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              View Subscription Pricing <ArrowRight size={17} style={{ flexShrink: 0, color: '#34d399' }} />
+            </Link>
           </div>
         </div>
       </section>

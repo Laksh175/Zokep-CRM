@@ -9,16 +9,33 @@ export const AuthProvider = ({ children }) => {
   const [subscription, setSubscription] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Load user profile on initial app load if token exists in localStorage
+  // Load user profile on initial app load with 0ms instant cache hydration
   useEffect(() => {
     const initAuth = async () => {
       const savedToken = localStorage.getItem('zokep_token');
+      const savedUser = localStorage.getItem('zokep_user');
+      const savedSub = localStorage.getItem('zokep_sub');
+
+      // 1. Instant 0ms Cache Hydration
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+          if (savedSub) setSubscription(JSON.parse(savedSub));
+          setLoading(false); // 0ms instant load!
+        } catch (e) {
+          console.warn('Cache parse error:', e);
+        }
+      }
+
+      // 2. Background Revalidation API Call
       if (savedToken) {
         try {
           const res = await api.get('/auth/me');
           if (res.success) {
             setUser(res.user);
             setSubscription(res.subscription);
+            localStorage.setItem('zokep_user', JSON.stringify(res.user));
+            if (res.subscription) localStorage.setItem('zokep_sub', JSON.stringify(res.subscription));
           }
         } catch (err) {
           console.warn('Session expired or invalid:', err.message);
@@ -35,6 +52,8 @@ export const AuthProvider = ({ children }) => {
     const res = await api.post('/auth/login', { email, password });
     if (res.success) {
       localStorage.setItem('zokep_token', res.token);
+      localStorage.setItem('zokep_user', JSON.stringify(res.user));
+      if (res.subscription) localStorage.setItem('zokep_sub', JSON.stringify(res.subscription));
       setToken(res.token);
       setUser(res.user);
       setSubscription(res.subscription);
@@ -47,6 +66,8 @@ export const AuthProvider = ({ children }) => {
     const res = await api.post('/auth/register-admin', registrationData);
     if (res.success) {
       localStorage.setItem('zokep_token', res.token);
+      localStorage.setItem('zokep_user', JSON.stringify(res.user));
+      if (res.subscription) localStorage.setItem('zokep_sub', JSON.stringify(res.subscription));
       setToken(res.token);
       setUser(res.user);
       setSubscription(res.subscription);
@@ -61,6 +82,8 @@ export const AuthProvider = ({ children }) => {
       if (res.success) {
         setUser(res.user);
         setSubscription(res.subscription);
+        localStorage.setItem('zokep_user', JSON.stringify(res.user));
+        if (res.subscription) localStorage.setItem('zokep_sub', JSON.stringify(res.subscription));
       }
     } catch (err) {
       console.warn('Failed to refresh user profile:', err);
@@ -69,6 +92,8 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('zokep_token');
+    localStorage.removeItem('zokep_user');
+    localStorage.removeItem('zokep_sub');
     setToken(null);
     setUser(null);
     setSubscription(null);

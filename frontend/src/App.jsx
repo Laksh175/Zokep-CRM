@@ -84,8 +84,9 @@ const ProtectedLayout = ({ allowedRoles, children }) => {
 
   if (loading) {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)', color: 'var(--text-primary)' }}>
-        <p>Loading session...</p>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-main)', color: 'var(--text-primary)', gap: '12px' }}>
+        <div style={{ width: '36px', height: '36px', border: '3px solid rgba(0, 56, 101, 0.15)', borderTopColor: '#00a651', borderRadius: '50%', animation: 'spin 0.6s linear infinite' }} />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Opening ZOKEP CRM Workspace...</span>
       </div>
     );
   }
