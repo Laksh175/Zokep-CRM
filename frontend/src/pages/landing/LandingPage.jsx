@@ -103,7 +103,7 @@ export const LandingPage = () => {
   const displayPlans = filteredPlans.length > 0 ? filteredPlans : plans;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', overflowX: 'clip', width: '100%' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', width: '100%' }}>
       <Navbar />
 
       {/* Hero Section */}

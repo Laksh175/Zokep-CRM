@@ -1,23 +1,35 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ArrowUp } from 'lucide-react';
 
 export const ScrollToTopButton = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     const handleScroll = () => {
       const mainContent = document.querySelector('.main-content');
-      const windowScroll = window.scrollY;
-      const mainContentScroll = mainContent ? mainContent.scrollTop : 0;
+      const winScroll =
+        window.scrollY ||
+        window.pageYOffset ||
+        document.documentElement.scrollTop ||
+        document.body.scrollTop ||
+        0;
+      const mainScroll = mainContent ? mainContent.scrollTop : 0;
 
-      if (windowScroll > 300 || mainContentScroll > 300) {
+      if (winScroll > 200 || mainScroll > 200) {
         setIsVisible(true);
       } else {
         setIsVisible(false);
       }
     };
 
+    // Run initial check immediately
+    handleScroll();
+
     window.addEventListener('scroll', handleScroll, { passive: true });
+    document.addEventListener('scroll', handleScroll, { passive: true });
+
     const mainContent = document.querySelector('.main-content');
     if (mainContent) {
       mainContent.addEventListener('scroll', handleScroll, { passive: true });
@@ -25,11 +37,12 @@ export const ScrollToTopButton = () => {
 
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('scroll', handleScroll);
       if (mainContent) {
         mainContent.removeEventListener('scroll', handleScroll);
       }
     };
-  }, []);
+  }, [location.pathname]);
 
   const scrollToTop = () => {
     window.scrollTo({

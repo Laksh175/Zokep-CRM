@@ -10,6 +10,7 @@ const ScrollToTop = () => {
   const { pathname, hash } = useLocation();
 
   useEffect(() => {
+    document.body.style.overflow = '';
     if (!hash) {
       window.scrollTo(0, 0);
       const mainContent = document.querySelector('.main-content');

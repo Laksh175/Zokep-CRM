@@ -79,7 +79,6 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  overflow-x: hidden;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -107,15 +106,17 @@ a:hover {
 }
 
 .glass-nav {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-  width: 100%;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 9999 !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  backdrop-filter: blur(14px) !important;
+  -webkit-backdrop-filter: blur(14px) !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  box-shadow: 0 4px 12px rgba(0, 34, 68, 0.06) !important;
 }
 
 /* Responsive Navbar Utilities */
@@ -131,12 +132,17 @@ a:hover {
 }
 .nav-mobile-toggle {
   display: none;
-  background: none;
-  border: none;
-  color: var(--text-primary);
+  background: rgba(0, 56, 101, 0.08);
+  border: 1px solid rgba(0, 56, 101, 0.16);
+  color: #003865;
   cursor: pointer;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+.nav-mobile-toggle:hover,
+.nav-mobile-toggle:active {
+  background: rgba(0, 56, 101, 0.14);
 }
 @media (max-width: 860px) {
   .nav-desktop-links {
@@ -810,7 +816,6 @@ a:hover {
 
 /* Responsive adjustments */
 html, body, #root {
-  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
 }

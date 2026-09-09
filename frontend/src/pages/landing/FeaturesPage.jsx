@@ -28,7 +28,7 @@ export const FeaturesPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', overflowX: 'clip', width: '100%' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-main)', color: 'var(--text-primary)', width: '100%' }}>
       <Navbar />
 
       {/* Hero Header */}

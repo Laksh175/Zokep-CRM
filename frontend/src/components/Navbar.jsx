@@ -120,7 +120,8 @@ export const Navbar = () => {
   const industriesActive = isActive('/industries');
 
   return (
-    <nav className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 1000, padding: '12px 0' }}>
+    <>
+      <nav className="glass-nav" style={{ position: 'fixed', top: 0, left: 0, right: 0, width: '100%', zIndex: 9999, padding: '12px 0' }}>
       <div
         style={{
           maxWidth: '1240px',
@@ -372,7 +373,7 @@ export const Navbar = () => {
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Toggle navigation menu"
         >
-          {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          {mobileMenuOpen ? <X size={22} color="#003865" /> : <Menu size={22} color="#003865" />}
         </button>
       </div>
 
@@ -535,6 +536,8 @@ export const Navbar = () => {
         </div>
       )}
     </nav>
+    <div style={{ height: '68px', width: '100%', flexShrink: 0 }} />
+  </>
   );
 };
 
