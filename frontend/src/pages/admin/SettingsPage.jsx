@@ -12,6 +12,8 @@ import {
   ExternalLink,
   Code,
   Sparkles,
+  Check,
+  Loader2,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -36,6 +38,7 @@ export const SettingsPage = () => {
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [editingStatusId, setEditingStatusId] = useState(null);
   const [statusForm, setStatusForm] = useState({ name: '', color: '#3b82f6', isDefault: false, isConvertedState: false, isLostState: false });
+  const [submittingStatus, setSubmittingStatus] = useState(false);
 
   // Custom Field Modal State
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
@@ -48,6 +51,7 @@ export const SettingsPage = () => {
     isRequired: false,
     showInTable: true,
   });
+  const [submittingField, setSubmittingField] = useState(false);
 
   // Template Modal State
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
@@ -58,6 +62,11 @@ export const SettingsPage = () => {
     subject: '',
     body: '',
   });
+  const [submittingTemplate, setSubmittingTemplate] = useState(false);
+
+  // Public form copy states
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [copiedEmbed, setCopiedEmbed] = useState(false);
 
   useEffect(() => {
     fetchAllSettings();
@@ -108,6 +117,7 @@ export const SettingsPage = () => {
     }
 
     try {
+      setSubmittingStatus(true);
       if (editingStatusId) {
         const res = await api.put(`/settings/statuses/${editingStatusId}`, statusForm);
         if (res.success) {
@@ -125,6 +135,8 @@ export const SettingsPage = () => {
       fetchAllSettings();
     } catch (err) {
       error(err.message || 'Failed to save status');
+    } finally {
+      setSubmittingStatus(false);
     }
   };
 
@@ -169,6 +181,7 @@ export const SettingsPage = () => {
     }
 
     try {
+      setSubmittingField(true);
       const payload = {
         ...fieldForm,
         options: fieldForm.optionsText ? fieldForm.optionsText.split(',').map((o) => o.trim()).filter(Boolean) : [],
@@ -187,6 +200,8 @@ export const SettingsPage = () => {
       fetchAllSettings();
     } catch (err) {
       error(err.message || 'Failed to save field');
+    } finally {
+      setSubmittingField(false);
     }
   };
 
@@ -229,6 +244,7 @@ export const SettingsPage = () => {
     }
 
     try {
+      setSubmittingTemplate(true);
       if (editingTemplateId) {
         const res = await api.put(`/settings/templates/${editingTemplateId}`, templateForm);
         if (res.success) success('Template updated successfully');
@@ -242,6 +258,8 @@ export const SettingsPage = () => {
       fetchAllSettings();
     } catch (err) {
       error(err.message || 'Failed to save template');
+    } finally {
+      setSubmittingTemplate(false);
     }
   };
 
@@ -260,11 +278,18 @@ export const SettingsPage = () => {
 
   const publicFormUrl = `${window.location.origin}/f/${user?.tenantId || user?.id}`;
   const embedCode = `<iframe src="${publicFormUrl}" width="100%" height="650" frameborder="0" style="border-radius: 12px; border: 1px solid #e2e8f0;"></iframe>`;
-  const iframeEmbedCode = embedCode;
 
-  const copyToClipboard = (text, label) => {
+  const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
-    success(`${label} copied to clipboard!`);
+    if (type === 'url') {
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2500);
+      success('Public form link copied to clipboard!');
+    } else {
+      setCopiedEmbed(true);
+      setTimeout(() => setCopiedEmbed(false), 2500);
+      success('HTML Embed code copied to clipboard!');
+    }
   };
 
   return (
@@ -534,47 +559,64 @@ export const SettingsPage = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ background: 'var(--bg-surface-elevated)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-medium)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <ExternalLink size={18} color="var(--primary-500)" />
+                  <ExternalLink size={19} color="var(--primary-500)" style={{ flexShrink: 0 }} />
                   <strong style={{ fontSize: '15px' }}>Direct Link (Share with Clients)</strong>
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
                   Send this URL via WhatsApp, SMS, or bio links:
                 </p>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     readOnly
                     className="form-input"
                     value={publicFormUrl}
-                    style={{ background: 'var(--bg-surface)', fontFamily: 'monospace', fontSize: '13px' }}
+                    style={{ flex: 1, minWidth: '220px', background: 'var(--bg-surface)', fontFamily: 'monospace', fontSize: '13px' }}
                   />
-                  <button className="btn btn-secondary" onClick={() => copyToClipboard(publicFormUrl, 'Public form link')}>
-                    <Copy size={16} /> Copy
+                  <button
+                    className={`btn ${copiedUrl ? 'btn-success' : 'btn-secondary'}`}
+                    onClick={() => copyToClipboard(publicFormUrl, 'url')}
+                    style={{ flexShrink: 0, padding: '10px 18px', minWidth: '120px' }}
+                  >
+                    {copiedUrl ? <Check size={18} /> : <Copy size={18} />}
+                    <span>{copiedUrl ? 'Copied!' : 'Copy Link'}</span>
                   </button>
-                  <a href={publicFormUrl} target="_blank" rel="noreferrer" className="btn btn-primary">
-                    <ExternalLink size={16} /> Open
+                  <a
+                    href={publicFormUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-primary"
+                    style={{ flexShrink: 0, padding: '10px 18px', textDecoration: 'none', color: '#ffffff' }}
+                  >
+                    <ExternalLink size={18} />
+                    <span>Open Form</span>
                   </a>
                 </div>
               </div>
 
               <div style={{ background: 'var(--bg-surface-elevated)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border-medium)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <Code size={18} color="#10b981" />
+                  <Code size={19} color="#10b981" style={{ flexShrink: 0 }} />
                   <strong style={{ fontSize: '15px' }}>HTML Embed Code (For Your Website)</strong>
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
                   Paste this iframe into your WordPress, Webflow, or custom website:
                 </p>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                   <textarea
                     readOnly
                     className="form-textarea"
                     rows={3}
                     value={embedCode}
-                    style={{ background: 'var(--bg-surface)', fontFamily: 'monospace', fontSize: '12px' }}
+                    style={{ flex: 1, minWidth: '220px', background: 'var(--bg-surface)', fontFamily: 'monospace', fontSize: '12px' }}
                   />
-                  <button className="btn btn-secondary" onClick={() => copyToClipboard(embedCode, 'Embed code')}>
-                    <Copy size={16} /> Copy
+                  <button
+                    className={`btn ${copiedEmbed ? 'btn-success' : 'btn-secondary'}`}
+                    onClick={() => copyToClipboard(embedCode, 'embed')}
+                    style={{ flexShrink: 0, padding: '10px 18px', minWidth: '125px' }}
+                  >
+                    {copiedEmbed ? <Check size={18} /> : <Copy size={18} />}
+                    <span>{copiedEmbed ? 'Copied!' : 'Copy Embed'}</span>
                   </button>
                 </div>
               </div>
@@ -590,11 +632,18 @@ export const SettingsPage = () => {
         title={editingStatusId ? 'Edit Lead Status' : 'Add Custom Lead Status'}
         footer={
           <>
-            <button className="btn btn-secondary" onClick={() => setStatusModalOpen(false)}>
+            <button className="btn btn-secondary" onClick={() => setStatusModalOpen(false)} disabled={submittingStatus}>
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={handleSaveStatus}>
-              {editingStatusId ? 'Update Status' : 'Save Status'}
+            <button className="btn btn-primary" onClick={handleSaveStatus} disabled={submittingStatus}>
+              {submittingStatus ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                editingStatusId ? 'Update Status' : 'Save Status'
+              )}
             </button>
           </>
         }
@@ -666,11 +715,18 @@ export const SettingsPage = () => {
         title={editingFieldId ? 'Edit Custom Field' : 'Add Dynamic Custom Form Field'}
         footer={
           <>
-            <button className="btn btn-secondary" onClick={() => setFieldModalOpen(false)}>
+            <button className="btn btn-secondary" onClick={() => setFieldModalOpen(false)} disabled={submittingField}>
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={handleSaveField}>
-              {editingFieldId ? 'Update Field' : 'Save Field'}
+            <button className="btn btn-primary" onClick={handleSaveField} disabled={submittingField}>
+              {submittingField ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                editingFieldId ? 'Update Field' : 'Save Field'
+              )}
             </button>
           </>
         }
@@ -751,11 +807,18 @@ export const SettingsPage = () => {
         maxWidth="620px"
         footer={
           <>
-            <button className="btn btn-secondary" onClick={() => setTemplateModalOpen(false)}>
+            <button className="btn btn-secondary" onClick={() => setTemplateModalOpen(false)} disabled={submittingTemplate}>
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={handleSaveTemplate}>
-              {editingTemplateId ? 'Update Template' : 'Save Template'}
+            <button className="btn btn-primary" onClick={handleSaveTemplate} disabled={submittingTemplate}>
+              {submittingTemplate ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                editingTemplateId ? 'Update Template' : 'Save Template'
+              )}
             </button>
           </>
         }

@@ -25,6 +25,9 @@ import {
   UserCheck,
   RefreshCw,
   FolderKanban,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -36,7 +39,7 @@ import WhatsAppIcon from '../../components/WhatsAppIcon';
 import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatDate, formatDateTime } from '../../utils/date';
+import { formatDate, formatDateTime, formatTime, toDateTimeLocalInput } from '../../utils/date';
 import confetti from 'canvas-confetti';
 
 export const LeadManagementPage = () => {
@@ -48,6 +51,12 @@ export const LeadManagementPage = () => {
   const [customFields, setCustomFields] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'kanban'
+
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -83,6 +92,7 @@ export const LeadManagementPage = () => {
   const [newStatusId, setNewStatusId] = useState('');
   const [newNextFollowup, setNewNextFollowup] = useState('');
   const [savingFollowup, setSavingFollowup] = useState(false);
+  const [deletingLeadId, setDeletingLeadId] = useState(null);
 
   // Quick Action Modals
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
@@ -99,7 +109,8 @@ export const LeadManagementPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchLeads();
+    setPage(1);
+    fetchLeads(1, limit);
   }, [statusFilter, assigneeFilter, sourceFilter, priorityFilter]);
 
   const fetchMetadata = async () => {
@@ -117,7 +128,7 @@ export const LeadManagementPage = () => {
     }
   };
 
-  const fetchLeads = async () => {
+  const fetchLeads = async (targetPage = page, targetLimit = limit) => {
     try {
       setLoading(true);
       const res = await api.get('/leads', {
@@ -126,11 +137,18 @@ export const LeadManagementPage = () => {
         assignedTo: assigneeFilter,
         source: sourceFilter,
         priority: priorityFilter,
+        page: targetPage,
+        limit: targetLimit,
       });
       if (res && res.success && Array.isArray(res.data)) {
         setLeads(res.data);
+        setTotalLeads(res.total ?? res.data.length);
+        setTotalPages(res.totalPages || 1);
+        setPage(res.page || targetPage);
       } else {
         setLeads([]);
+        setTotalLeads(0);
+        setTotalPages(1);
       }
     } catch (err) {
       error(err.message || 'Failed to fetch leads');
@@ -140,9 +158,17 @@ export const LeadManagementPage = () => {
     }
   };
 
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== page) {
+      setPage(newPage);
+      fetchLeads(newPage, limit);
+    }
+  };
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchLeads();
+    setPage(1);
+    fetchLeads(1, limit);
   };
 
   const openAddLeadModal = () => {
@@ -175,9 +201,9 @@ export const LeadManagementPage = () => {
       source: lead.source || 'manual',
       notes: lead.notes || '',
       priority: lead.priority || 'medium',
-      statusId: lead.statusId?._id || '',
-      assignedTo: lead.assignedTo?._id || '',
-      nextFollowupDate: lead.nextFollowupDate ? String(lead.nextFollowupDate).split('T')[0] : '',
+      statusId: lead.statusId?._id || lead.statusId || '',
+      assignedTo: lead.assignedTo?._id || lead.assignedTo || '',
+      nextFollowupDate: toDateTimeLocalInput(lead.nextFollowupDate),
       customFieldsData: lead.customFieldsData || {},
     });
     setLeadModalOpen(true);
@@ -192,15 +218,28 @@ export const LeadManagementPage = () => {
 
     try {
       setSubmittingLead(true);
+      const payload = {
+        ...leadForm,
+        nextFollowupDate: leadForm.nextFollowupDate ? new Date(leadForm.nextFollowupDate).toISOString() : null,
+      };
+
       if (editingLeadId) {
-        const res = await api.put(`/leads/${editingLeadId}`, leadForm);
-        if (res.success) success('Lead updated successfully');
+        const res = await api.put(`/leads/${editingLeadId}`, payload);
+        if (res.success) {
+          success('Lead updated successfully');
+          // Optimistically update in place
+          if (res.data) {
+            setLeads((prev) => prev.map((l) => (l._id === editingLeadId ? res.data : l)));
+          }
+        }
       } else {
-        const res = await api.post('/leads', leadForm);
-        if (res.success) success('Lead created successfully');
+        const res = await api.post('/leads', payload);
+        if (res.success) {
+          success('Lead created successfully');
+          fetchLeads(1, limit);
+        }
       }
       setLeadModalOpen(false);
-      fetchLeads();
     } catch (err) {
       error(err.message || 'Failed to save lead');
     } finally {
@@ -210,8 +249,8 @@ export const LeadManagementPage = () => {
 
   const openLeadDetails = async (lead) => {
     setActiveLead(lead);
-    setNewStatusId(lead.statusId?._id || '');
-    setNewNextFollowup(lead.nextFollowupDate ? String(lead.nextFollowupDate).split('T')[0] : '');
+    setNewStatusId(lead.statusId?._id || lead.statusId || '');
+    setNewNextFollowup(toDateTimeLocalInput(lead.nextFollowupDate));
     setFollowupNote('');
     setDetailsModalOpen(true);
 
@@ -233,28 +272,26 @@ export const LeadManagementPage = () => {
       const res = await api.post(`/leads/${activeLead._id}/followup`, {
         statusId: newStatusId,
         note: followupNote,
-        nextFollowupDate: newNextNextDateFormatted(newNextFollowup),
+        nextFollowupDate: newNextFollowup ? new Date(newNextFollowup).toISOString() : null,
       });
 
       if (res.success) {
         success('Follow-up and status updated!');
         setActiveLead(res.data);
         setFollowupNote('');
+        // Optimistically update lead in table
+        if (res.data) {
+          setLeads((prev) => prev.map((l) => (l._id === activeLead._id ? res.data : l)));
+        }
         // Refresh activities
         const fresh = await api.get(`/leads/${activeLead._id}`);
         if (fresh.success) setLeadActivities(fresh.data.activities || []);
-        fetchLeads();
       }
     } catch (err) {
       error(err.message || 'Failed to record follow-up');
     } finally {
       setSavingFollowup(false);
     }
-  };
-
-  const newNextNextDateFormatted = (dt) => {
-    if (!dt) return null;
-    return new Date(dt).toISOString();
   };
 
   const handleConvertToCustomer = async (lead) => {
@@ -270,7 +307,7 @@ export const LeadManagementPage = () => {
       if (res.success) {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         success('🎉 Lead successfully converted to Customer!');
-        fetchLeads();
+        fetchLeads(page, limit);
         if (activeLead?._id === lead._id) {
           openLeadDetails(res.data);
         }
@@ -284,18 +321,34 @@ export const LeadManagementPage = () => {
     if (e && e.currentTarget) e.currentTarget.blur();
     if (!window.confirm('Are you sure you want to permanently delete this lead?')) return;
     try {
+      setDeletingLeadId(id);
       const res = await api.delete(`/leads/${id}`);
       if (res.success) {
         success('Lead deleted');
-        setDetailsModalOpen(false);
-        fetchLeads();
+        setLeads((prev) => prev.filter((l) => l._id !== id));
+        setTotalLeads((prev) => Math.max(0, prev - 1));
+        if (activeLead?._id === id) setDetailsModalOpen(false);
       }
     } catch (err) {
       error(err.message || 'Failed to delete lead');
+    } finally {
+      setDeletingLeadId(null);
     }
   };
 
   const handleQuickReassign = async (leadId, newAssignedTo) => {
+    const previousLeads = [...leads];
+    const staffObj = staffList.find((s) => s._id === newAssignedTo || s.id === newAssignedTo);
+
+    // Optimistic UI update (0ms instant response)
+    setLeads((prev) =>
+      prev.map((l) =>
+        l._id === leadId
+          ? { ...l, assignedTo: staffObj ? { _id: staffObj._id || staffObj.id, name: staffObj.name, email: staffObj.email } : null }
+          : l
+      )
+    );
+
     try {
       const res = await api.put(`/leads/${leadId}/reassign`, {
         assignedTo: newAssignedTo || null,
@@ -303,28 +356,46 @@ export const LeadManagementPage = () => {
       });
       if (res.success) {
         success(res.message || 'Lead assignee updated successfully');
-        fetchLeads();
+        if (res.data) {
+          setLeads((prev) => prev.map((l) => (l._id === leadId ? res.data : l)));
+        }
         if (activeLead && activeLead._id === leadId) {
           setActiveLead(res.data);
         }
       }
     } catch (err) {
+      setLeads(previousLeads);
       error(err.message || 'Failed to reassign lead');
     }
   };
 
   const handleQuickStatusChange = async (leadId, newStatusId) => {
+    const previousLeads = [...leads];
+    const statusObj = statuses.find((s) => s._id === newStatusId);
+
+    // Optimistic UI update (0ms instant response)
+    setLeads((prev) =>
+      prev.map((l) =>
+        l._id === leadId
+          ? { ...l, statusId: statusObj || l.statusId, isConverted: statusObj?.isConvertedState ? true : l.isConverted }
+          : l
+      )
+    );
+
     try {
-      const res = await api.put(`/leads/${leadId}`, { statusId: newStatusId });
+      const res = await api.put(`/leads/${leadId}/status`, { statusId: newStatusId });
       if (res && res.success) {
         success(res.message || 'Status updated successfully');
-        fetchLeads();
+        if (res.data) {
+          setLeads((prev) => prev.map((l) => (l._id === leadId ? res.data : l)));
+        }
         if (activeLead && activeLead._id === leadId) {
           setActiveLead(res.data);
           setNewStatusId(newStatusId);
         }
       }
     } catch (err) {
+      setLeads(previousLeads);
       error(err.message || 'Failed to update status');
     }
   };
@@ -362,7 +433,7 @@ export const LeadManagementPage = () => {
         success(res.message);
         setUploadModalOpen(false);
         setCsvFile(null);
-        fetchLeads();
+        fetchLeads(1, limit);
       }
     } catch (err) {
       error(err.message || 'Bulk upload failed');
@@ -581,9 +652,14 @@ export const LeadManagementPage = () => {
                         </td>
                         <td>
                           {lead.nextFollowupDate ? (
-                            <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
-                              {formatDate(lead.nextFollowupDate)}
-                            </span>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>
+                                📅 {formatDate(lead.nextFollowupDate)}
+                              </span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                                ⏰ {formatTime(lead.nextFollowupDate)}
+                              </span>
+                            </div>
                           ) : (
                             <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
                           )}
@@ -651,6 +727,7 @@ export const LeadManagementPage = () => {
                               onClick={(e) => handleDeleteLead(lead._id, e)}
                               className="btn btn-danger btn-action"
                               title="Delete Lead"
+                              disabled={deletingLeadId === lead._id}
                             >
                               <Trash2 size={15} />
                             </button>
@@ -660,6 +737,74 @@ export const LeadManagementPage = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {totalLeads > 0 && (
+              <div className="pagination-bar" style={{ marginTop: '16px' }}>
+                <div className="pagination-info">
+                  Showing <strong>{leads.length > 0 ? (page - 1) * limit + 1 : 0}</strong> to{' '}
+                  <strong>{Math.min(page * limit, totalLeads)}</strong> of <strong>{totalLeads}</strong> leads
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                    <span>Per page:</span>
+                    <select
+                      className="pagination-select"
+                      value={limit}
+                      onChange={(e) => {
+                        const newLimit = Number(e.target.value);
+                        setLimit(newLimit);
+                        setPage(1);
+                        fetchLeads(1, newLimit);
+                      }}
+                    >
+                      <option value={10}>10</option>
+                      <option value={25}>25</option>
+                      <option value={50}>50</option>
+                      <option value={100}>100</option>
+                    </select>
+                  </div>
+
+                  <div className="pagination-controls">
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChange(page - 1)}
+                      disabled={page <= 1}
+                      title="Previous Page"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter((p) => p === 1 || p === totalPages || (p >= page - 2 && p <= page + 2))
+                      .map((p, idx, arr) => {
+                        const prev = arr[idx - 1];
+                        return (
+                          <React.Fragment key={p}>
+                            {prev && p - prev > 1 && <span style={{ padding: '0 4px', color: 'var(--text-muted)' }}>...</span>}
+                            <button
+                              className={`pagination-btn ${page === p ? 'active' : ''}`}
+                              onClick={() => handlePageChange(p)}
+                            >
+                              {p}
+                            </button>
+                          </React.Fragment>
+                        );
+                      })}
+
+                    <button
+                      className="pagination-btn"
+                      onClick={() => handlePageChange(page + 1)}
+                      disabled={page >= totalPages}
+                      title="Next Page"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -902,6 +1047,16 @@ export const LeadManagementPage = () => {
           )}
 
           <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Next Scheduled Follow-up (Date & Time)</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={leadForm.nextFollowupDate}
+              onChange={(e) => setLeadForm({ ...leadForm, nextFollowupDate: e.target.value })}
+            />
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
             <label className="form-label">Initial Notes / Requirement Overview</label>
             <textarea
               className="form-textarea"
@@ -926,6 +1081,7 @@ export const LeadManagementPage = () => {
                 className="btn btn-danger btn-sm"
                 onClick={() => handleDeleteLead(activeLead._id)}
                 style={{ marginRight: 'auto' }}
+                disabled={deletingLeadId === activeLead._id}
               >
                 <Trash2 size={14} /> Delete
               </button>
@@ -1074,9 +1230,9 @@ export const LeadManagementPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="form-label">Next Follow-up Date</label>
+                  <label className="form-label">Next Follow-up Date & Time</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     className="form-input"
                     value={newNextFollowup}
                     onChange={(e) => setNewNextFollowup(e.target.value)}
@@ -1099,7 +1255,14 @@ export const LeadManagementPage = () => {
                 className="btn btn-primary btn-sm"
                 disabled={savingFollowup}
               >
-                {savingFollowup ? 'Saving...' : 'Save Follow-up & Activity'}
+                {savingFollowup ? (
+                  <>
+                    <span className="btn-spinner" />
+                    <span>Saving...</span>
+                  </>
+                ) : (
+                  'Save Follow-up & Activity'
+                )}
               </button>
             </div>
 
@@ -1148,8 +1311,17 @@ export const LeadManagementPage = () => {
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleBulkUpload} disabled={uploading || !csvFile}>
-              <Upload size={16} />
-              {uploading ? 'Importing CSV...' : 'Start Import'}
+              {uploading ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>Importing CSV...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={16} />
+                  <span>Start Import</span>
+                </>
+              )}
             </button>
           </>
         }

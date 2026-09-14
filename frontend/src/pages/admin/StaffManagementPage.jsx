@@ -230,7 +230,16 @@ export const StaffManagementPage = () => {
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? 'Saving...' : editingStaffId ? 'Update Staff' : 'Add & Send Credentials'}
+              {submitting ? (
+                <>
+                  <span className="btn-spinner" />
+                  Saving...
+                </>
+              ) : editingStaffId ? (
+                'Update Staff'
+              ) : (
+                'Add & Send Credentials'
+              )}
             </button>
           </>
         }

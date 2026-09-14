@@ -103,8 +103,17 @@ export const EmailModal = ({ isOpen, onClose, lead, onEmailSuccess }) => {
             Cancel
           </button>
           <button className="btn btn-primary" onClick={handleSendEmail} disabled={loading}>
-            <Send size={16} />
-            {loading ? 'Sending Email...' : 'Send Email Now'}
+            {loading ? (
+              <>
+                <span className="btn-spinner" />
+                Sending Email...
+              </>
+            ) : (
+              <>
+                <Send size={16} />
+                Send Email Now
+              </>
+            )}
           </button>
         </>
       }

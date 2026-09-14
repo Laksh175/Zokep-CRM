@@ -141,8 +141,17 @@ export const WhatsAppModal = ({ isOpen, onClose, lead, onFollowupSuccess }) => {
             Cancel
           </button>
           <button className="btn btn-whatsapp" onClick={handleSend} disabled={loading}>
-            <WhatsAppIcon size={16} color="#ffffff" />
-            Open WhatsApp Chat
+            {loading ? (
+              <>
+                <span className="btn-spinner" />
+                Opening WhatsApp...
+              </>
+            ) : (
+              <>
+                <WhatsAppIcon size={16} color="#ffffff" />
+                Open WhatsApp Chat
+              </>
+            )}
           </button>
         </>
       }

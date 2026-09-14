@@ -199,19 +199,34 @@ a:hover {
   transition: all var(--transition-fast);
   white-space: nowrap;
   user-select: none;
+  text-decoration: none;
+}
+
+.btn svg {
+  flex-shrink: 0;
+}
+
+.btn:disabled,
+.btn[disabled] {
+  opacity: 0.65;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #003865 0%, #002747 100%);
-  color: #ffffff;
+  color: #ffffff !important;
   box-shadow: 0 4px 14px var(--primary-glow);
 }
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background: linear-gradient(135deg, #004b87 0%, #003366 100%);
+  color: #ffffff !important;
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(0, 56, 101, 0.28);
 }
-.btn-primary:active {
+.btn-primary:active:not(:disabled) {
   transform: translateY(0);
 }
 
@@ -909,3 +924,120 @@ img, svg {
     padding: 16px;
   }
 }
+
+/* ==========================================================================
+   Spinners, Loaders & Animations
+   ========================================================================== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 0.8s linear infinite !important;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.btn-spinner-dark {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(0, 56, 101, 0.2);
+  border-top-color: #003865;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ==========================================================================
+   Data Table Pagination Bar
+   ========================================================================== */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  flex-wrap: wrap;
+  gap: 12px;
+  border-bottom-left-radius: var(--radius-lg);
+  border-bottom-right-radius: var(--radius-lg);
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: var(--bg-surface-elevated);
+  border-color: var(--primary-500);
+  color: var(--primary-500);
+}
+
+.pagination-btn.active {
+  background: var(--primary-500);
+  color: #ffffff !important;
+  border-color: var(--primary-500);
+  box-shadow: 0 2px 6px var(--primary-glow);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination-select {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  font-size: 13px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  outline: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+

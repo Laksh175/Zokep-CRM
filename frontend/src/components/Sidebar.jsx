@@ -219,6 +219,15 @@ export const Sidebar = () => {
               My Workspace
             </NavLink>
             <NavLink
+              to="/staff/followups"
+              onClick={closeSidebar}
+              className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', borderRadius: '8px', textAlign: 'left' }}
+            >
+              <Clock size={18} />
+              Today's Follow-ups
+            </NavLink>
+            <NavLink
               to="/staff/leads"
               onClick={closeSidebar}
               className={({ isActive }) => `tab-btn ${isActive ? 'active' : ''}`}

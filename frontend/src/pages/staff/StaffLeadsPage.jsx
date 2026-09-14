@@ -11,6 +11,8 @@ import {
   ExternalLink,
   Clock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -22,7 +24,7 @@ import WhatsAppIcon from '../../components/WhatsAppIcon';
 import CustomSelect from '../../components/CustomSelect';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
-import { formatDate, formatDateTime } from '../../utils/date';
+import { formatDate, formatTime, formatDateTime, toDateTimeLocalInput, isToday, isOverdue } from '../../utils/date';
 import confetti from 'canvas-confetti';
 
 export const StaffLeadsPage = () => {
@@ -32,6 +34,12 @@ export const StaffLeadsPage = () => {
   const [statuses, setStatuses] = useState([]);
   const [customFields, setCustomFields] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination State
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(25);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -73,7 +81,8 @@ export const StaffLeadsPage = () => {
   }, []);
 
   useEffect(() => {
-    fetchMyLeads();
+    setPage(1);
+    fetchMyLeads(1, limit);
   }, [statusFilter, priorityFilter]);
 
   const fetchMetadata = async () => {
@@ -89,16 +98,28 @@ export const StaffLeadsPage = () => {
     }
   };
 
-  const fetchMyLeads = async () => {
+  const fetchMyLeads = async (pageToFetch = page, limitToFetch = limit) => {
     try {
       setLoading(true);
       const res = await api.get('/leads', {
         search,
         statusId: statusFilter,
         priority: priorityFilter,
+        page: pageToFetch,
+        limit: limitToFetch,
       });
-      if (res && res.success && Array.isArray(res.data)) {
-        setLeads(res.data);
+
+      if (res && res.success) {
+        if (Array.isArray(res.data)) {
+          setLeads(res.data);
+          setTotalLeads(res.data.length);
+          setTotalPages(1);
+        } else if (res.data && Array.isArray(res.data.leads)) {
+          setLeads(res.data.leads);
+          setTotalLeads(res.data.totalLeads || 0);
+          setTotalPages(res.data.totalPages || 1);
+          setPage(res.data.page || pageToFetch);
+        }
       } else {
         setLeads([]);
       }
@@ -112,7 +133,8 @@ export const StaffLeadsPage = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    fetchMyLeads();
+    setPage(1);
+    fetchMyLeads(1, limit);
   };
 
   const openAddModal = () => {
@@ -140,11 +162,15 @@ export const StaffLeadsPage = () => {
 
     try {
       setSubmittingLead(true);
-      const res = await api.post('/leads', leadForm);
+      const payload = {
+        ...leadForm,
+        nextFollowupDate: leadForm.nextFollowupDate ? new Date(leadForm.nextFollowupDate).toISOString() : null,
+      };
+      const res = await api.post('/leads', payload);
       if (res.success) {
         success('Lead added and assigned to you!');
         setAddModalOpen(false);
-        fetchMyLeads();
+        fetchMyLeads(1, limit);
       }
     } catch (err) {
       error(err.message || 'Failed to add lead');
@@ -155,8 +181,8 @@ export const StaffLeadsPage = () => {
 
   const openLeadDetails = async (lead) => {
     setActiveLead(lead);
-    setNewStatusId(lead.statusId?._id || '');
-    setNewNextFollowup(lead.nextFollowupDate ? String(lead.nextFollowupDate).split('T')[0] : '');
+    setNewStatusId(lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : ''));
+    setNewNextFollowup(lead.nextFollowupDate ? toDateTimeLocalInput(lead.nextFollowupDate) : '');
     setFollowupNote('');
     setDetailsModalOpen(true);
 
@@ -185,9 +211,14 @@ export const StaffLeadsPage = () => {
         success('Follow-up and status updated!');
         setActiveLead(res.data);
         setFollowupNote('');
+
+        // 0ms Optimistic UI update in current table view
+        setLeads((prev) =>
+          prev.map((ld) => (ld._id === activeLead._id ? res.data : ld))
+        );
+
         const fresh = await api.get(`/leads/${activeLead._id}`);
         if (fresh.success) setActivities(fresh.data.activities || []);
-        fetchMyLeads();
       }
     } catch (err) {
       error(err.message || 'Failed to update follow-up');
@@ -209,7 +240,14 @@ export const StaffLeadsPage = () => {
       if (res.success) {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         success('🎉 Congratulations on closing this deal!');
-        fetchMyLeads();
+        // 0ms Optimistic UI update
+        setLeads((prev) =>
+          prev.map((ld) =>
+            ld._id === lead._id
+              ? { ...ld, isConverted: true, dealValue: Number(amountStr) || lead.dealValue }
+              : ld
+          )
+        );
         if (activeLead?._id === lead._id) {
           openLeadDetails(res.data);
         }
@@ -219,18 +257,30 @@ export const StaffLeadsPage = () => {
     }
   };
 
-  const handleQuickStatusChange = async (leadId, newStatusId) => {
+  const handleQuickStatusChange = async (leadId, newStatusIdVal) => {
+    const previousLeads = [...leads];
+    const targetStatusObj = statuses.find((s) => s._id === newStatusIdVal);
+
+    // 0ms Optimistic UI update - eliminates UI lag
+    setLeads((prev) =>
+      prev.map((ld) =>
+        ld._id === leadId
+          ? { ...ld, statusId: targetStatusObj || newStatusIdVal }
+          : ld
+      )
+    );
+
     try {
-      const res = await api.put(`/leads/${leadId}`, { statusId: newStatusId });
+      const res = await api.put(`/leads/${leadId}`, { statusId: newStatusIdVal });
       if (res && res.success) {
         success(res.message || 'Status updated successfully');
-        fetchMyLeads();
         if (activeLead && activeLead._id === leadId) {
           setActiveLead(res.data);
-          setNewStatusId(newStatusId);
+          setNewStatusId(newStatusIdVal);
         }
       }
     } catch (err) {
+      setLeads(previousLeads);
       error(err.message || 'Failed to update status');
     }
   };
@@ -301,7 +351,7 @@ export const StaffLeadsPage = () => {
         {/* Leads Table */}
         <div className="glass-panel" style={{ padding: '20px' }}>
           {loading ? (
-            <p style={{ textAlign: 'center', padding: '24px 0' }}>Loading your leads...</p>
+            <p style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-secondary)' }}>Loading your leads...</p>
           ) : leads.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px 0' }}>
               <CheckCircle2 size={48} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
@@ -314,112 +364,209 @@ export const StaffLeadsPage = () => {
               </button>
             </div>
           ) : (
-            <div className="table-container">
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Lead Contact</th>
-                    <th>Company</th>
-                    <th>Deal Value</th>
-                    <th>Status</th>
-                    <th>Next Follow-up</th>
-                    <th>1-Click Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leads.map((lead) => (
-                    <tr key={lead._id}>
-                      <td>
-                        <a
-                          href="#details"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            openLeadDetails(lead);
-                          }}
-                          style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}
-                        >
-                          {lead.name}
-                        </a>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {lead.phone} {lead.email && `• ${lead.email}`}
-                        </div>
-                      </td>
-                      <td>{lead.company || '-'}</td>
-                      <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
-                        ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
-                      </td>
-                      <td>
-                        <CustomSelect
-                          value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
-                          onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
-                          style={{ minWidth: '135px' }}
-                          options={statuses.map((st) => ({
-                            value: st._id,
-                            label: st.name,
-                            color: st.color,
-                          }))}
-                        />
-                      </td>
-                      <td>
-                        {lead.nextFollowupDate ? (
-                          <span style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600 }}>
-                            {formatDate(lead.nextFollowupDate)}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <button
-                            onClick={() => {
-                              setQuickActionLead(lead);
-                              setWhatsAppModalOpen(true);
+            <>
+              <div className="table-container">
+                <table className="crm-table">
+                  <thead>
+                    <tr>
+                      <th>Lead Contact</th>
+                      <th>Company</th>
+                      <th>Deal Value</th>
+                      <th>Status</th>
+                      <th>Next Follow-up</th>
+                      <th>1-Click Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leads.map((lead) => (
+                      <tr key={lead._id}>
+                        <td>
+                          <a
+                            href="#details"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              openLeadDetails(lead);
                             }}
-                            className="btn btn-whatsapp btn-sm"
-                            title="1-Click WhatsApp"
+                            style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}
                           >
-                            <WhatsAppIcon size={14} color="#ffffff" />
-                            <span>WA</span>
-                          </button>
-
-                          {lead.email && (
+                            {lead.name}
+                          </a>
+                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            {lead.phone} {lead.email && `• ${lead.email}`}
+                          </div>
+                        </td>
+                        <td>{lead.company || '-'}</td>
+                        <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
+                          ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
+                        </td>
+                        <td>
+                          <CustomSelect
+                            value={lead.statusId?._id || lead.statusId?.id || (typeof lead.statusId === 'string' ? lead.statusId : '')}
+                            onChange={(e) => handleQuickStatusChange(lead._id, e.target.value)}
+                            style={{ minWidth: '135px' }}
+                            options={statuses.map((st) => ({
+                              value: st._id,
+                              label: st.name,
+                              color: st.color,
+                            }))}
+                          />
+                        </td>
+                        <td>
+                          {lead.nextFollowupDate ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <span
+                                style={{
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  color: isOverdue(lead.nextFollowupDate)
+                                    ? '#ef4444'
+                                    : isToday(lead.nextFollowupDate)
+                                    ? '#10b981'
+                                    : '#f59e0b',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <Calendar size={13} />
+                                {formatDate(lead.nextFollowupDate)}
+                                {isToday(lead.nextFollowupDate) && (
+                                  <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '10px', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                    TODAY
+                                  </span>
+                                )}
+                                {isOverdue(lead.nextFollowupDate) && !isToday(lead.nextFollowupDate) && (
+                                  <span style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '10px', padding: '1px 5px', borderRadius: '4px', fontWeight: 800 }}>
+                                    OVERDUE
+                                  </span>
+                                )}
+                              </span>
+                              {formatTime(lead.nextFollowupDate) && (
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Clock size={11} />
+                                  {formatTime(lead.nextFollowupDate)}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <button
                               onClick={() => {
                                 setQuickActionLead(lead);
-                                setEmailModalOpen(true);
+                                setWhatsAppModalOpen(true);
                               }}
-                              className="btn btn-secondary btn-action"
-                              title="1-Click Email"
+                              className="btn btn-whatsapp btn-sm"
+                              title="1-Click WhatsApp"
                             >
-                              <Mail size={15} color="#0284c7" />
+                              <WhatsAppIcon size={14} color="#ffffff" />
+                              <span>WA</span>
                             </button>
-                          )}
 
-                          {!lead.isConverted && (
+                            {lead.email && (
+                              <button
+                                onClick={() => {
+                                  setQuickActionLead(lead);
+                                  setEmailModalOpen(true);
+                                }}
+                                className="btn btn-secondary btn-action"
+                                title="1-Click Email"
+                              >
+                                <Mail size={15} color="#0284c7" />
+                              </button>
+                            )}
+
+                            {!lead.isConverted && (
+                              <button
+                                onClick={() => handleConvertToCustomer(lead)}
+                                className="btn btn-success btn-action"
+                                title="Convert to Customer Deal"
+                              >
+                                <UserCheck size={15} color="#ffffff" />
+                              </button>
+                            )}
+
                             <button
-                              onClick={() => handleConvertToCustomer(lead)}
-                              className="btn btn-success btn-action"
-                              title="Convert to Customer Deal"
+                              onClick={() => openLeadDetails(lead)}
+                              className="btn btn-secondary btn-action"
+                              title="Update Follow-up & View Activity"
                             >
-                              <UserCheck size={15} color="#ffffff" />
+                              <Clock size={15} color="#475569" />
                             </button>
-                          )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                          <button
-                            onClick={() => openLeadDetails(lead)}
-                            className="btn btn-secondary btn-action"
-                            title="Update Follow-up & View Activity"
-                          >
-                            <Clock size={15} color="#475569" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+              {/* Pagination Bar */}
+              {totalPages > 0 && totalLeads > 0 && (
+                <div className="pagination-bar">
+                  <div className="pagination-info">
+                    Showing <strong>{leads.length > 0 ? (page - 1) * limit + 1 : 0}</strong> to{' '}
+                    <strong>{Math.min(page * limit, totalLeads)}</strong> of <strong>{totalLeads}</strong> leads
+                  </div>
+
+                  <div className="pagination-controls">
+                    <button
+                      className="pagination-btn"
+                      disabled={page <= 1}
+                      onClick={() => {
+                        const next = page - 1;
+                        setPage(next);
+                        fetchMyLeads(next, limit);
+                      }}
+                      title="Previous Page"
+                    >
+                      <ChevronLeft size={16} />
+                      <span>Prev</span>
+                    </button>
+
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', padding: '0 6px' }}>
+                      Page {page} of {totalPages}
+                    </span>
+
+                    <button
+                      className="pagination-btn"
+                      disabled={page >= totalPages}
+                      onClick={() => {
+                        const next = page + 1;
+                        setPage(next);
+                        fetchMyLeads(next, limit);
+                      }}
+                      title="Next Page"
+                    >
+                      <span>Next</span>
+                      <ChevronRight size={16} />
+                    </button>
+
+                    <div style={{ marginLeft: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Show:</span>
+                      <select
+                        className="pagination-select"
+                        value={limit}
+                        onChange={(e) => {
+                          const newLim = Number(e.target.value);
+                          setLimit(newLim);
+                          setPage(1);
+                          fetchMyLeads(1, newLim);
+                        }}
+                      >
+                        <option value={10}>10 / page</option>
+                        <option value={25}>25 / page</option>
+                        <option value={50}>50 / page</option>
+                        <option value={100}>100 / page</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -436,7 +583,14 @@ export const StaffLeadsPage = () => {
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleAddLead} disabled={submittingLead}>
-              {submittingLead ? 'Saving...' : 'Add Lead'}
+              {submittingLead ? (
+                <>
+                  <span className="btn-spinner" />
+                  Saving...
+                </>
+              ) : (
+                'Add Lead'
+              )}
             </button>
           </>
         }
@@ -513,6 +667,16 @@ export const StaffLeadsPage = () => {
                 }))}
               />
             </div>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Schedule Next Follow-up (Date & Time)</label>
+            <input
+              type="datetime-local"
+              className="form-input"
+              value={leadForm.nextFollowupDate}
+              onChange={(e) => setLeadForm({ ...leadForm, nextFollowupDate: e.target.value })}
+            />
           </div>
 
           {/* Dynamic Extra Custom Fields */}
@@ -620,9 +784,9 @@ export const StaffLeadsPage = () => {
                   />
                 </div>
                 <div>
-                  <label className="form-label">Next Contact Date</label>
+                  <label className="form-label">Next Follow-up (Date & Time)</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     className="form-input"
                     value={newNextFollowup}
                     onChange={(e) => setNewNextFollowup(e.target.value)}
@@ -645,7 +809,14 @@ export const StaffLeadsPage = () => {
                 className="btn btn-primary btn-sm"
                 disabled={savingFollowup}
               >
-                {savingFollowup ? 'Saving...' : 'Save Follow-up'}
+                {savingFollowup ? (
+                  <>
+                    <span className="btn-spinner" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Follow-up'
+                )}
               </button>
             </div>
 
@@ -677,7 +848,7 @@ export const StaffLeadsPage = () => {
             setQuickActionLead(null);
           }}
           lead={quickActionLead}
-          onFollowupSuccess={fetchMyLeads}
+          onFollowupSuccess={() => fetchMyLeads(page, limit)}
         />
       )}
 
@@ -690,7 +861,7 @@ export const StaffLeadsPage = () => {
             setQuickActionLead(null);
           }}
           lead={quickActionLead}
-          onEmailSuccess={fetchMyLeads}
+          onEmailSuccess={() => fetchMyLeads(page, limit)}
         />
       )}
     </div>

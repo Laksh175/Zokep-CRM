@@ -47,5 +47,8 @@ const activityLogSchema = new mongoose.Schema(
   }
 );
 
+activityLogSchema.index({ tenantId: 1, leadId: 1, createdAt: -1 });
+activityLogSchema.index({ tenantId: 1, performedBy: 1, createdAt: -1 });
+
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 export default ActivityLog;

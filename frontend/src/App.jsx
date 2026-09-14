@@ -77,6 +77,7 @@ const SubscriptionPlanPage = lazy(() => import('./pages/admin/SubscriptionPlanPa
 
 // Lazy Loaded Staff Pages
 const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
+const StaffFollowupsPage = lazy(() => import('./pages/staff/StaffFollowupsPage'));
 const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
 const StaffCustomersPage = lazy(() => import('./pages/staff/StaffCustomersPage'));
 
@@ -210,6 +211,14 @@ export const App = () => {
             element={
               <ProtectedLayout allowedRoles={['staff']}>
                 <StaffDashboard />
+              </ProtectedLayout>
+            }
+          />
+          <Route
+            path="/staff/followups"
+            element={
+              <ProtectedLayout allowedRoles={['staff']}>
+                <StaffFollowupsPage />
               </ProtectedLayout>
             }
           />

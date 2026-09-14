@@ -173,26 +173,48 @@ export const getAdminDashboard = async (req, res) => {
 export const getStaffMembers = async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const staff = await User.find({ tenantId, role: 'staff' }).sort({ createdAt: -1 });
 
-    const staffWithMetrics = await Promise.all(
-      staff.map(async (s) => {
-        const leadsCount = await Lead.countDocuments({ tenantId, assignedTo: s._id });
-        const convertedCount = await Lead.countDocuments({ tenantId, assignedTo: s._id, isConverted: true });
-        return {
-          id: s._id,
-          _id: s._id,
-          name: s.name,
-          email: s.email,
-          phone: s.phone,
-          isActive: s.isActive,
-          lastLogin: s.lastLogin,
-          createdAt: s.createdAt,
-          leadsCount,
-          convertedCount,
+    const [staff, leadStats] = await Promise.all([
+      User.find({ tenantId, role: 'staff' }).sort({ createdAt: -1 }).lean(),
+      Lead.aggregate([
+        { $match: { tenantId } },
+        {
+          $group: {
+            _id: '$assignedTo',
+            totalLeads: { $sum: 1 },
+            convertedLeads: {
+              $sum: { $cond: [{ $eq: ['$isConverted', true] }, 1, 0] },
+            },
+          },
+        },
+      ]),
+    ]);
+
+    const statsMap = {};
+    leadStats.forEach((stat) => {
+      if (stat._id) {
+        statsMap[String(stat._id)] = {
+          leadsCount: stat.totalLeads || 0,
+          convertedCount: stat.convertedLeads || 0,
         };
-      })
-    );
+      }
+    });
+
+    const staffWithMetrics = staff.map((s) => {
+      const stats = statsMap[String(s._id)] || { leadsCount: 0, convertedCount: 0 };
+      return {
+        id: s._id,
+        _id: s._id,
+        name: s.name,
+        email: s.email,
+        phone: s.phone,
+        isActive: s.isActive,
+        lastLogin: s.lastLogin,
+        createdAt: s.createdAt,
+        leadsCount: stats.leadsCount,
+        convertedCount: stats.convertedCount,
+      };
+    });
 
     return res.json({ success: true, count: staffWithMetrics.length, data: staffWithMetrics });
   } catch (error) {

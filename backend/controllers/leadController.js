@@ -23,6 +23,7 @@ export const getLeads = async (req, res) => {
       isConverted,
       dateFrom,
       dateTo,
+      followupFilter,
       page = 1,
       limit = 50,
       sortBy = 'createdAt',
@@ -50,6 +51,26 @@ export const getLeads = async (req, res) => {
       query.isConverted = isConverted === 'true';
     }
 
+    // Follow-up quick filters (today, overdue, upcoming)
+    if (followupFilter) {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+      if (followupFilter === 'today') {
+        query.nextFollowupDate = { $gte: startOfToday, $lte: endOfToday };
+        query.isConverted = false;
+      } else if (followupFilter === 'overdue') {
+        query.nextFollowupDate = { $lt: startOfToday };
+        query.isConverted = false;
+      } else if (followupFilter === 'upcoming') {
+        const nextWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+        nextWeek.setHours(23, 59, 59, 999);
+        query.nextFollowupDate = { $gt: endOfToday, $lte: nextWeek };
+        query.isConverted = false;
+      }
+    }
+
     if (dateFrom || dateTo) {
       query.createdAt = {};
       if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
@@ -69,19 +90,27 @@ export const getLeads = async (req, res) => {
       ];
     }
 
-    const total = await Lead.countDocuments(query);
-    const leads = await Lead.find(query)
-      .populate('statusId', 'name color isConvertedState isLostState')
-      .populate('assignedTo', 'name email phone')
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
-      .skip((page - 1) * Number(limit))
-      .limit(Number(limit));
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 50);
+
+    // Parallel Count & Query Execution with .lean() for fast response
+    const [total, leads] = await Promise.all([
+      Lead.countDocuments(query),
+      Lead.find(query)
+        .populate('statusId', 'name color isConvertedState isLostState')
+        .populate('assignedTo', 'name email phone')
+        .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+        .skip((pageNum - 1) * limitNum)
+        .limit(limitNum)
+        .lean(),
+    ]);
 
     return res.json({
       success: true,
       total,
-      page: Number(page),
-      totalPages: Math.ceil(total / Number(limit)),
+      page: pageNum,
+      limit: limitNum,
+      totalPages: Math.ceil(total / limitNum) || 1,
       data: leads,
     });
   } catch (error) {
