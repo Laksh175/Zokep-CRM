@@ -7,18 +7,37 @@ import { formatDate } from '../utils/dateFormatter.js';
 
 let razorpayInstance = null;
 
-const getRazorpayInstance = () => {
-  if (!razorpayInstance && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+export const getRazorpayInstance = () => {
+  const keyId = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : '';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : '';
+
+  if (!razorpayInstance && keyId && keySecret && !keyId.includes('placeholder')) {
     try {
       razorpayInstance = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
+        key_id: keyId,
+        key_secret: keySecret,
       });
+      console.log(`[Razorpay] Initialized SDK with Key ID: ${keyId}`);
     } catch (e) {
-      console.warn('Razorpay init notice:', e.message);
+      console.warn('[Razorpay] Initialization warning:', e.message);
     }
   }
   return razorpayInstance;
+};
+
+// @desc    Get Razorpay Public Configuration
+// @route   GET /api/subscriptions/config
+// @access  Public
+export const getRazorpayConfig = async (req, res) => {
+  const keyId = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : '';
+  const isConfigured = Boolean(keyId && !keyId.includes('placeholder'));
+
+  return res.json({
+    success: true,
+    keyId: isConfigured ? keyId : 'rzp_test_placeholder_key_id',
+    isLive: isConfigured,
+    currency: 'INR',
+  });
 };
 
 // @desc    Create Razorpay Order for Plan Subscription / Renewal
@@ -26,48 +45,58 @@ const getRazorpayInstance = () => {
 // @access  Public / Private
 export const createRazorpayOrder = async (req, res) => {
   try {
-    const { planId, billingCycle } = req.body;
+    const { planId, billingCycle, tenantId: requestedTenantId, userEmail, companyName } = req.body;
+    const currentTenantId = req.tenantId || req.user?._id || requestedTenantId;
 
     const plan = await Plan.findById(planId);
     if (!plan) {
-      return res.status(404).json({ success: false, message: 'Plan not found' });
+      return res.status(404).json({ success: false, message: 'Subscription plan not found' });
     }
 
     const price = plan.price || 0;
     const amountInPaise = Math.round(price * 100);
 
     const rzp = getRazorpayInstance();
+    const keyId = process.env.RAZORPAY_KEY_ID ? process.env.RAZORPAY_KEY_ID.trim() : '';
+    const isLive = Boolean(rzp && keyId && !keyId.includes('placeholder'));
+
     let orderData = null;
 
-    if (rzp && process.env.RAZORPAY_KEY_ID !== 'rzp_test_placeholder_key_id') {
+    if (isLive && amountInPaise > 0) {
+      const receiptId = `rcpt_${Date.now().toString().slice(-8)}_${Math.floor(100 + Math.random() * 900)}`;
       const options = {
         amount: amountInPaise,
         currency: plan.currency || 'INR',
-        receipt: `rcpt_${Date.now().toString().slice(-8)}`,
+        receipt: receiptId.slice(0, 40), // Razorpay max receipt length is 40 chars
         notes: {
           planId: plan._id.toString(),
           planName: plan.name,
-          durationMonths: plan.durationMonths || 1,
-          billingCycle: plan.billingCycle || `${plan.durationMonths || 1} months`,
+          durationMonths: String(plan.durationMonths || 1),
+          billingCycle: plan.billingCycle || billingCycle || 'monthly',
+          tenantId: currentTenantId ? currentTenantId.toString() : '',
+          userEmail: userEmail || req.user?.email || '',
+          companyName: companyName || req.user?.companyName || '',
         },
       };
       orderData = await rzp.orders.create(options);
+      console.log(`[Razorpay] Created live order: ${orderData.id} for ₹${price} (${plan.name})`);
     } else {
-      // Test / Simulator order
+      // Test / Simulator / Free tier order
       orderData = {
         id: `order_sim_${Date.now()}`,
         amount: amountInPaise,
         currency: plan.currency || 'INR',
         receipt: `rcpt_sim_${Date.now().toString().slice(-6)}`,
         status: 'created',
-        mockMode: true,
+        mockMode: !isLive,
       };
     }
 
     return res.json({
       success: true,
       order: orderData,
-      keyId: process.env.RAZORPAY_KEY_ID || 'rzp_test_placeholder_key_id',
+      keyId: isLive ? keyId : 'rzp_test_placeholder_key_id',
+      isLive,
       plan: {
         id: plan._id,
         name: plan.name,
@@ -78,8 +107,8 @@ export const createRazorpayOrder = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error('Create Razorpay Order Error:', error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error('[Razorpay] Create Order Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Failed to initialize payment gateway order' });
   }
 };
 
@@ -105,19 +134,46 @@ export const verifyRazorpayPaymentAndRenew = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Plan not found' });
     }
 
-    // Verify signature if secret is configured and not mock
+    const keySecret = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : '';
+
+    // Verify HMAC signature if live Razorpay credentials are set
     if (
-      process.env.RAZORPAY_KEY_SECRET &&
-      process.env.RAZORPAY_KEY_SECRET !== 'rzp_test_placeholder_key_secret' &&
-      !razorpay_order_id?.startsWith('order_sim_')
+      keySecret &&
+      !keySecret.includes('placeholder') &&
+      razorpay_order_id &&
+      !razorpay_order_id.startsWith('order_sim_')
     ) {
       const generated_signature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .createHmac('sha256', keySecret)
         .update(`${razorpay_order_id}|${razorpay_payment_id}`)
         .digest('hex');
 
       if (generated_signature !== razorpay_signature) {
-        return res.status(400).json({ success: false, message: 'Invalid payment signature verification failed' });
+        console.error('[Razorpay] Verification signature mismatch:', {
+          generated: generated_signature,
+          received: razorpay_signature,
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'Payment verification failed: Invalid Razorpay payment signature',
+        });
+      }
+
+      // Verify payment capture status directly from Razorpay API
+      const rzp = getRazorpayInstance();
+      if (rzp && razorpay_payment_id) {
+        try {
+          const paymentEntity = await rzp.payments.fetch(razorpay_payment_id);
+          console.log(`[Razorpay] Fetched live payment ${razorpay_payment_id} status: ${paymentEntity.status}`);
+          if (paymentEntity.status !== 'captured' && paymentEntity.status !== 'authorized') {
+            return res.status(400).json({
+              success: false,
+              message: `Payment status is ${paymentEntity.status}. Expected captured or authorized.`,
+            });
+          }
+        } catch (fetchErr) {
+          console.warn('[Razorpay] Payment fetch notice:', fetchErr.message);
+        }
       }
     }
 
@@ -145,6 +201,7 @@ export const verifyRazorpayPaymentAndRenew = async (req, res) => {
       razorpayOrderId: razorpay_order_id || '',
       razorpayPaymentId: razorpay_payment_id || `pay_sim_${Date.now()}`,
       razorpaySignature: razorpay_signature || '',
+      invoiceNumber: `INV-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`,
       autoRenew: true,
     });
 
@@ -154,8 +211,8 @@ export const verifyRazorpayPaymentAndRenew = async (req, res) => {
       subscription,
     });
   } catch (error) {
-    console.error('Verify Payment Error:', error);
-    return res.status(500).json({ success: false, message: error.message });
+    console.error('[Razorpay] Verify Payment Error:', error);
+    return res.status(500).json({ success: false, message: error.message || 'Payment verification processing error' });
   }
 };
 
@@ -164,10 +221,10 @@ export const verifyRazorpayPaymentAndRenew = async (req, res) => {
 // @access  Public (Called by Razorpay server)
 export const handleRazorpayWebhook = async (req, res) => {
   try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET || 'rzp_webhook_secret_placeholder';
+    const secret = process.env.RAZORPAY_WEBHOOK_SECRET ? process.env.RAZORPAY_WEBHOOK_SECRET.trim() : '';
     const signature = req.headers['x-razorpay-signature'];
 
-    if (secret && signature && secret !== 'rzp_webhook_secret_placeholder') {
+    if (secret && signature && !secret.includes('placeholder')) {
       const shasum = crypto.createHmac('sha256', secret);
       shasum.update(JSON.stringify(req.body));
       const digest = shasum.digest('hex');
@@ -209,17 +266,21 @@ export const handleRazorpayWebhook = async (req, res) => {
             paymentMethod: 'razorpay',
             razorpayOrderId: payment.order_id || '',
             razorpayPaymentId: payment.id || '',
+            invoiceNumber: `INV-${Date.now().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`,
             autoRenew: true,
           });
 
           console.log(`[Razorpay Webhook] Activated ${months}-month subscription for tenant: ${notes.tenantId}`);
         }
       }
+    } else if (event === 'payment.failed') {
+      const payment = req.body.payload?.payment?.entity;
+      console.warn(`[Razorpay Webhook] Payment failed for order ${payment?.order_id}: ${payment?.error_description}`);
     }
 
     return res.json({ status: 'ok', received: true });
   } catch (error) {
-    console.error('Razorpay Webhook Error:', error);
+    console.error('[Razorpay Webhook] Error:', error);
     return res.status(500).json({ status: 'error', message: error.message });
   }
 };
@@ -268,3 +329,4 @@ export const getMySubscription = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+

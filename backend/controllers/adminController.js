@@ -275,6 +275,7 @@ export const createStaffMember = async (req, res) => {
       password: rawPassword,
       companyName: adminUser?.companyName || 'Our Company CRM',
       loginUrl: `${process.env.CLIENT_URL || 'http://localhost:5173'}/login`,
+      tenantId,
     }).catch((e) => console.log('Staff mailer warning:', e.message));
 
     return res.status(201).json({

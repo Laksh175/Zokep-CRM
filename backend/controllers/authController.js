@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Plan from '../models/Plan.js';
@@ -179,6 +180,38 @@ export const registerAdmin = async (req, res) => {
         success: false,
         message: 'No active subscription plan found. Please contact support.',
       });
+    }
+
+    // Verify live Razorpay payment signature if provided
+    const keySecret = process.env.RAZORPAY_KEY_SECRET ? process.env.RAZORPAY_KEY_SECRET.trim() : '';
+    if (
+      keySecret &&
+      !keySecret.includes('placeholder') &&
+      razorpayOrderId &&
+      !razorpayOrderId.startsWith('order_sim_')
+    ) {
+      if (!razorpayPaymentId || !razorpaySignature) {
+        return res.status(400).json({
+          success: false,
+          message: 'Incomplete Razorpay payment details received.',
+        });
+      }
+
+      const generatedSignature = crypto
+        .createHmac('sha256', keySecret)
+        .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+        .digest('hex');
+
+      if (generatedSignature !== razorpaySignature) {
+        console.error('[Razorpay Registration] Invalid payment signature mismatch:', {
+          generated: generatedSignature,
+          received: razorpaySignature,
+        });
+        return res.status(400).json({
+          success: false,
+          message: 'Razorpay payment verification failed. Invalid transaction signature.',
+        });
+      }
     }
 
     // Create Admin User

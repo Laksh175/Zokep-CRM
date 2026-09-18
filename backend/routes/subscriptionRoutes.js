@@ -1,5 +1,5 @@
-import express from 'express';
 import {
+  getRazorpayConfig,
   createRazorpayOrder,
   verifyRazorpayPaymentAndRenew,
   handleRazorpayWebhook,
@@ -10,13 +10,12 @@ import { authorize } from '../middleware/roleMiddleware.js';
 
 const router = express.Router();
 
-// Webhook from Razorpay (public)
+// Public routes for Razorpay
+router.get('/config', getRazorpayConfig);
 router.post('/razorpay-webhook', handleRazorpayWebhook);
-
-// Order creation can be public (for new registrations) or private (for renewals)
 router.post('/create-order', createRazorpayOrder);
 
-// Protected routes
+// Protected routes (Admin)
 router.use(protect);
 router.post('/verify-payment', authorize('admin'), verifyRazorpayPaymentAndRenew);
 router.get('/my-subscription', authorize('admin'), getMySubscription);

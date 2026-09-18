@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { CreditCard, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import Modal from './Modal';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import confetti from 'canvas-confetti';
 import { loadRazorpayScript } from '../utils/loadRazorpay';
 
 export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'monthly', onPaymentSuccess }) => {
+  const { user } = useAuth();
   const { success, error } = useToast();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState('summary'); // 'summary' | 'simulating'
@@ -22,20 +24,23 @@ export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'm
       const orderRes = await api.post('/subscriptions/create-order', {
         planId: plan._id || plan.id,
         billingCycle,
+        userEmail: user?.email,
+        companyName: user?.companyName,
       });
 
       if (!orderRes.success) {
         throw new Error(orderRes.message || 'Failed to create payment order');
       }
 
-      const { order, keyId } = orderRes;
+      const { order, keyId, isLive } = orderRes;
 
       // 2. Check if live Razorpay SDK is available and key is configured
       if (
         window.Razorpay &&
         keyId &&
-        keyId !== 'rzp_test_placeholder_key_id' &&
-        !order.mockMode
+        !keyId.includes('placeholder') &&
+        !order.mockMode &&
+        order.amount > 0
       ) {
         const options = {
           key: keyId,
@@ -44,6 +49,26 @@ export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'm
           name: 'Zokep CRM',
           description: `Subscription: ${plan.name} (${billingCycle})`,
           order_id: order.id,
+          prefill: {
+            name: user?.name || '',
+            email: user?.email || '',
+            contact: user?.phone || '',
+          },
+          notes: {
+            planId: plan._id || plan.id,
+            tenantId: user?.tenantId || user?._id || '',
+            companyName: user?.companyName || '',
+          },
+          theme: {
+            color: '#4f46e5',
+          },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+            },
+            escape: true,
+            animation: true,
+          },
           handler: async (response) => {
             try {
               const verifyRes = await api.post('/subscriptions/verify-payment', {
@@ -62,18 +87,22 @@ export const RazorpayCheckoutModal = ({ isOpen, onClose, plan, billingCycle = 'm
               }
             } catch (err) {
               error(err.message || 'Payment verification failed');
+            } finally {
+              setLoading(false);
             }
-          },
-          theme: {
-            color: '#4f46e5',
           },
         };
 
         const rzp1 = new window.Razorpay(options);
+        rzp1.on('payment.failed', (resp) => {
+          console.error('[Razorpay Renewal Error]:', resp.error);
+          error(resp.error?.description || 'Payment was declined or failed.');
+          setLoading(false);
+        });
+
         rzp1.open();
-        setLoading(false);
       } else {
-        // Run Instant Razorpay Simulator
+        // Run Instant Razorpay Simulator (for free tier or dev testing)
         setStep('simulating');
         setTimeout(async () => {
           try {

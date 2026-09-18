@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import User from '../models/User.js';
 
 let transporter = null;
 
@@ -19,7 +20,7 @@ export const initMailer = async () => {
         pass: cleanPass,
       },
     });
-    console.log(`[Mailer] Initialized with SMTP config (${host}:${port}) for ${cleanUser}`);
+    console.log(`[Mailer] Initialized platform SMTP (${host}:${port}) for ${cleanUser}`);
   } else {
     // Development / fallback transporter
     try {
@@ -41,21 +42,131 @@ export const initMailer = async () => {
   }
 };
 
-const sendMailSafely = async (mailOptions) => {
-  try {
-    if (!transporter) {
-      await initMailer();
+// Retrieve either a tenant-configured Gmail transporter or fallback platform transporter
+export const getTenantTransporter = async (tenantId) => {
+  if (tenantId) {
+    try {
+      const adminUser = await User.findById(tenantId);
+      if (
+        adminUser?.gmailSmtp?.isConfigured &&
+        adminUser?.gmailSmtp?.user &&
+        adminUser?.gmailSmtp?.pass
+      ) {
+        const cleanUser = adminUser.gmailSmtp.user.trim();
+        const cleanPass = adminUser.gmailSmtp.pass.trim();
+        const fromName = adminUser.gmailSmtp.fromName || adminUser.companyName || 'Zokep CRM';
+
+        const customTransporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: cleanUser,
+            pass: cleanPass,
+          },
+        });
+
+        return {
+          transporter: customTransporter,
+          from: `"${fromName}" <${cleanUser}>`,
+          senderEmail: cleanUser,
+          isTenantCustom: true,
+        };
+      }
+    } catch (err) {
+      console.error(`[Mailer] Error resolving tenant transporter for ${tenantId}:`, err.message);
     }
-    if (transporter) {
-      const info = await transporter.sendMail({
-        from: process.env.EMAIL_FROM || '"Zokep CRM" <no-reply@zokepcrm.com>',
+  }
+
+  // Fallback to platform default
+  if (!transporter) {
+    await initMailer();
+  }
+
+  return {
+    transporter,
+    from: process.env.EMAIL_FROM || '"Zokep CRM" <no-reply@zokepcrm.com>',
+    senderEmail: process.env.SMTP_USER || 'no-reply@zokepcrm.com',
+    isTenantCustom: false,
+  };
+};
+
+// Test and verify Gmail SMTP credentials live
+export const testTenantGmailConnection = async ({ user, pass, testRecipient, senderName }) => {
+  if (!user || !pass) {
+    throw new Error('Gmail address and Google App Password are required');
+  }
+
+  const cleanUser = user.trim();
+  const cleanPass = pass.trim();
+
+  const testTransporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: cleanUser,
+      pass: cleanPass,
+    },
+  });
+
+  // Verify connection
+  await testTransporter.verify();
+
+  const recipient = testRecipient && testRecipient.trim() ? testRecipient.trim() : cleanUser;
+  const fromName = senderName || 'Zokep CRM';
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+      <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 28px 24px; text-align: center; color: #ffffff;">
+        <h2 style="margin: 0; font-size: 22px; font-weight: 700;">✅ Gmail SMTP Connected Successfully!</h2>
+        <p style="margin: 6px 0 0; opacity: 0.95; font-size: 14px;">Zokep CRM Tenant Email Integration</p>
+      </div>
+      <div style="padding: 26px 24px; color: #334155; line-height: 1.6;">
+        <p style="font-size: 15px; margin-top: 0;">Congratulations!</p>
+        <p>Your Gmail credentials (<strong>${cleanUser}</strong>) have been verified and are ready to dispatch emails directly from your Zokep CRM dashboard.</p>
+        
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 20px 0;">
+          <h4 style="margin: 0 0 8px; color: #166534; font-size: 14px;">Configuration Status:</h4>
+          <p style="margin: 4px 0; font-size: 13px;">• <strong>Sender Email:</strong> ${cleanUser}</p>
+          <p style="margin: 4px 0; font-size: 13px;">• <strong>Sender Name:</strong> ${fromName}</p>
+          <p style="margin: 4px 0; font-size: 13px;">• <strong>Service:</strong> Gmail SMTP (App Password Authenticated)</p>
+          <p style="margin: 4px 0; font-size: 13px;">• <strong>Verified At:</strong> ${new Date().toLocaleString()}</p>
+        </div>
+
+        <p style="font-size: 13px; color: #64748b; margin-bottom: 0;">
+          All staff invitations, 1-Click lead follow-ups, and message templates will now be delivered via this Gmail account.
+        </p>
+      </div>
+    </div>
+  `;
+
+  const info = await testTransporter.sendMail({
+    from: `"${fromName}" <${cleanUser}>`,
+    to: recipient,
+    subject: '✅ Zokep CRM - Gmail SMTP Test Connection Verified',
+    html,
+  });
+
+  return {
+    success: true,
+    messageId: info.messageId,
+    recipient,
+    sender: cleanUser,
+  };
+};
+
+const sendMailSafely = async (mailOptions, tenantId = null) => {
+  try {
+    const { transporter: activeTransporter, from: defaultFrom, isTenantCustom } =
+      await getTenantTransporter(tenantId);
+
+    if (activeTransporter) {
+      const info = await activeTransporter.sendMail({
+        from: defaultFrom,
         ...mailOptions,
       });
-      console.log(`[Mailer] Email sent: ${info.messageId}`);
+      console.log(`[Mailer] Email sent (${isTenantCustom ? 'Tenant Gmail' : 'Platform'}): ${info.messageId} to ${mailOptions.to}`);
       if (nodemailer.getTestMessageUrl(info)) {
         console.log(`[Mailer] Preview URL: ${nodemailer.getTestMessageUrl(info)}`);
       }
-      return { success: true, messageId: info.messageId };
+      return { success: true, messageId: info.messageId, isTenantCustom };
     } else {
       console.log('--- [MAIL LOG (MOCK)] ---');
       console.log(`To: ${mailOptions.to}`);
@@ -70,7 +181,7 @@ const sendMailSafely = async (mailOptions) => {
   }
 };
 
-// Send credentials to newly registered Tenant Admin
+// Send credentials to newly registered Tenant Admin (uses platform mailer)
 export const sendAdminWelcomeEmail = async ({ to, name, email, password, companyName, planName, loginUrl }) => {
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
@@ -108,8 +219,8 @@ export const sendAdminWelcomeEmail = async ({ to, name, email, password, company
   });
 };
 
-// Send credentials to newly created Staff Member
-export const sendStaffWelcomeEmail = async ({ to, name, email, password, companyName, loginUrl }) => {
+// Send credentials to newly created Staff Member (uses tenant Gmail if configured)
+export const sendStaffWelcomeEmail = async ({ to, name, email, password, companyName, loginUrl, tenantId }) => {
   const html = `
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
       <div style="background: #0ea5e9; padding: 28px 24px; text-align: center; color: #ffffff;">
@@ -134,20 +245,26 @@ export const sendStaffWelcomeEmail = async ({ to, name, email, password, company
     </div>
   `;
 
-  return await sendMailSafely({
-    to,
-    subject: `🔐 Staff Login Credentials - ${companyName || 'Zokep CRM'}`,
-    html,
-  });
+  return await sendMailSafely(
+    {
+      to,
+      subject: `🔐 Staff Login Credentials - ${companyName || 'Zokep CRM'}`,
+      html,
+    },
+    tenantId
+  );
 };
 
-// Send custom email using template
-export const sendCustomLeadEmail = async ({ to, subject, html, replyTo, fromName }) => {
-  return await sendMailSafely({
-    to,
-    subject,
-    html,
-    replyTo,
-    from: fromName ? `"${fromName}" <no-reply@zokepcrm.com>` : undefined,
-  });
+// Send custom email using template or manual trigger (uses tenant Gmail if configured)
+export const sendCustomLeadEmail = async ({ to, subject, html, replyTo, fromName, tenantId }) => {
+  return await sendMailSafely(
+    {
+      to,
+      subject,
+      html,
+      replyTo,
+      from: fromName ? `"${fromName}"` : undefined,
+    },
+    tenantId
+  );
 };

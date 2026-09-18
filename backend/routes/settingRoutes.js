@@ -13,6 +13,9 @@ import {
   updateTemplate,
   deleteTemplate,
   sendLeadEmailWithTemplate,
+  getGmailSmtpSettings,
+  saveGmailSmtpSettings,
+  testGmailSmtpSettings,
 } from '../controllers/settingController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
@@ -41,5 +44,10 @@ router.delete('/templates/:id', authorize('admin'), deleteTemplate);
 
 // Dispatch email to lead using Nodemailer
 router.post('/send-lead-email', authorize('admin', 'staff'), sendLeadEmailWithTemplate);
+
+// Tenant Gmail SMTP Credentials Management
+router.get('/gmail-smtp', authorize('admin'), getGmailSmtpSettings);
+router.post('/gmail-smtp', authorize('admin'), saveGmailSmtpSettings);
+router.post('/gmail-smtp/test', authorize('admin'), testGmailSmtpSettings);
 
 export default router;

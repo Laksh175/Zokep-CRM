@@ -25,6 +25,12 @@ import {
   HelpCircle,
   QrCode,
   Key,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  Info,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -38,7 +44,7 @@ import { useToast } from '../../context/ToastContext';
 export const SettingsPage = () => {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState('statuses'); // 'statuses' | 'fields' | 'templates' | 'public_form' | 'integrations'
+  const [activeTab, setActiveTab] = useState('statuses'); // 'statuses' | 'fields' | 'templates' | 'gmail_smtp' | 'public_form' | 'integrations'
 
   // Data states
   const [statuses, setStatuses] = useState([]);
@@ -76,6 +82,21 @@ export const SettingsPage = () => {
   });
   const [submittingTemplate, setSubmittingTemplate] = useState(false);
 
+  // Gmail SMTP State
+  const [gmailForm, setGmailForm] = useState({
+    user: '',
+    pass: '',
+    fromName: '',
+    isConfigured: false,
+    hasPassword: false,
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [savingGmail, setSavingGmail] = useState(false);
+  const [testModalOpen, setTestModalOpen] = useState(false);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [testingGmail, setTestingGmail] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+
   // Public form copy states
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
@@ -99,14 +120,24 @@ export const SettingsPage = () => {
   const fetchAllSettings = async () => {
     try {
       setLoading(true);
-      const [stRes, cfRes, tpRes] = await Promise.all([
+      const [stRes, cfRes, tpRes, gmRes] = await Promise.all([
         api.get('/settings/statuses'),
         api.get('/settings/custom-fields'),
         api.get('/settings/templates'),
+        api.get('/settings/gmail-smtp').catch(() => ({ success: false })),
       ]);
       if (stRes.success) setStatuses(stRes.data);
       if (cfRes.success) setCustomFields(cfRes.data);
       if (tpRes.success) setTemplates(tpRes.data);
+      if (gmRes?.success && gmRes.data) {
+        setGmailForm({
+          user: gmRes.data.user || '',
+          pass: gmRes.data.hasPassword ? '••••••••' : '',
+          fromName: gmRes.data.fromName || user?.companyName || '',
+          isConfigured: !!gmRes.data.isConfigured,
+          hasPassword: !!gmRes.data.hasPassword,
+        });
+      }
     } catch (err) {
       error(err.message || 'Failed to load settings');
     } finally {
@@ -300,6 +331,96 @@ export const SettingsPage = () => {
     }
   };
 
+  // Gmail SMTP Actions
+  const handleSaveGmailSmtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!gmailForm.user) {
+      error('Please enter your Gmail address (SMTP_USER)');
+      return;
+    }
+    if (!gmailForm.pass) {
+      error('Please enter your Google App Password (SMTP_PASS)');
+      return;
+    }
+
+    try {
+      setSavingGmail(true);
+      const res = await api.post('/settings/gmail-smtp', {
+        user: gmailForm.user,
+        pass: gmailForm.pass,
+        fromName: gmailForm.fromName,
+        isConfigured: true,
+      });
+      if (res.success) {
+        success('Gmail SMTP credentials saved successfully!');
+        setGmailForm({
+          user: res.data.user,
+          pass: res.data.hasPassword ? '••••••••' : '',
+          fromName: res.data.fromName,
+          isConfigured: res.data.isConfigured,
+          hasPassword: res.data.hasPassword,
+        });
+      }
+    } catch (err) {
+      error(err.message || 'Failed to save Gmail credentials');
+    } finally {
+      setSavingGmail(false);
+    }
+  };
+
+  const handleDisableGmailSmtp = async () => {
+    if (!window.confirm('Disable custom Gmail SMTP and revert to system default email sender?')) return;
+    try {
+      setSavingGmail(true);
+      const res = await api.post('/settings/gmail-smtp', {
+        user: gmailForm.user,
+        pass: gmailForm.pass,
+        fromName: gmailForm.fromName,
+        isConfigured: false,
+      });
+      if (res.success) {
+        success('Custom Gmail SMTP disabled. System mailer will be used.');
+        setGmailForm((prev) => ({ ...prev, isConfigured: false }));
+      }
+    } catch (err) {
+      error(err.message || 'Failed to update settings');
+    } finally {
+      setSavingGmail(false);
+    }
+  };
+
+  const handleTestGmailSmtp = async (e) => {
+    if (e) e.preventDefault();
+    if (!gmailForm.user) {
+      error('Please enter a Gmail address first');
+      return;
+    }
+    if (!gmailForm.pass) {
+      error('Please enter a Google App Password first');
+      return;
+    }
+
+    try {
+      setTestingGmail(true);
+      setTestResult(null);
+      const res = await api.post('/settings/gmail-smtp/test', {
+        user: gmailForm.user,
+        pass: gmailForm.pass,
+        fromName: gmailForm.fromName,
+        testRecipient: testEmailRecipient || gmailForm.user,
+      });
+      if (res.success) {
+        setTestResult({ success: true, message: res.message || 'Test email delivered successfully!' });
+        success('Test email delivered! Check the recipient inbox.');
+      }
+    } catch (err) {
+      setTestResult({ success: false, message: err.message || 'Failed to authenticate with Gmail.' });
+      error(err.message || 'Gmail SMTP test failed');
+    } finally {
+      setTestingGmail(false);
+    }
+  };
+
   const tenantId = user?.tenantId || user?.id || user?._id;
   const backendBaseUrl = window.location.origin;
   const publicFormUrl = `${backendBaseUrl}/f/${tenantId}`;
@@ -421,6 +542,13 @@ export const SettingsPage = () => {
           >
             <MessageSquare size={16} style={{ display: 'inline', marginRight: 6 }} />
             Message Templates (WA & Email)
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'gmail_smtp' ? 'active' : ''}`}
+            onClick={() => setActiveTab('gmail_smtp')}
+          >
+            <Mail size={16} style={{ display: 'inline', marginRight: 6, color: '#ea4335' }} />
+            Gmail SMTP Credentials
           </button>
           <button
             className={`tab-btn ${activeTab === 'public_form' ? 'active' : ''}`}
@@ -649,6 +777,189 @@ export const SettingsPage = () => {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: GMAIL SMTP CREDENTIALS */}
+        {activeTab === 'gmail_smtp' && (
+          <div className="glass-panel" style={{ padding: '28px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'rgba(234, 67, 53, 0.12)', border: '1px solid rgba(234, 67, 53, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea4335' }}>
+                    <Mail size={20} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Gmail SMTP Credentials (Nodemailer)</h3>
+                </div>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, maxWidth: '650px' }}>
+                  Configure your Gmail address (<code>SMTP_USER</code>) and Google App Password (<code>SMTP_PASS</code>) to send staff invitations, 1-Click lead follow-ups, and message templates directly from your Gmail account.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {gmailForm.isConfigured && gmailForm.user ? (
+                  <Badge variant="success">
+                    <CheckCircle2 size={13} style={{ marginRight: 4 }} />
+                    Active: {gmailForm.user}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">
+                    Using Platform Default Mailer
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Google App Password Step-by-Step Guide */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(234, 67, 53, 0.05) 0%, rgba(99, 102, 241, 0.05) 100%)', border: '1px solid rgba(234, 67, 53, 0.2)', borderRadius: '12px', padding: '18px 20px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
+                <strong style={{ color: 'var(--text-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={16} color="#ea4335" />
+                  How to generate your 16-character Google App Password:
+                </strong>
+                <a
+                  href="https://myaccount.google.com/apppasswords"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-secondary btn-sm"
+                  style={{ textDecoration: 'none', color: '#ea4335', borderColor: 'rgba(234, 67, 53, 0.3)' }}
+                >
+                  <ExternalLink size={13} />
+                  <span>Open Google App Passwords Page</span>
+                </a>
+              </div>
+              <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                <li>Go to your <strong>Google Account Security</strong> settings and make sure <strong>2-Step Verification</strong> is enabled.</li>
+                <li>Visit <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: '#4f46e5', textDecoration: 'underline' }}>Google App Passwords</a>.</li>
+                <li>Enter an app name such as <strong>"Zokep CRM"</strong> and click <strong>Create</strong>.</li>
+                <li>Copy the generated <strong>16-character password</strong> (e.g. <code>abcd efgh ijkl mnop</code>) and paste it into the <strong>Google App Password (SMTP_PASS)</strong> field below.</li>
+              </ol>
+            </div>
+
+            {/* Configuration Form */}
+            <form onSubmit={handleSaveGmailSmtp} style={{ maxWidth: '680px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* Gmail Address */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    Gmail Address (SMTP_USER) *
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. sales@yourbusiness.com or yourname@gmail.com"
+                      className="form-input"
+                      style={{ paddingLeft: '38px' }}
+                      value={gmailForm.user}
+                      onChange={(e) => setGmailForm({ ...gmailForm, user: e.target.value })}
+                    />
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Your personal or Google Workspace email address used to authenticate SMTP dispatches.
+                  </span>
+                </div>
+
+                {/* Google App Password */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    Google App Password (SMTP_PASS) *
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                      <Lock size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required={!gmailForm.hasPassword}
+                        placeholder={gmailForm.hasPassword ? '•••••••• (Enter new to replace)' : '16-character Google App Password'}
+                        className="form-input"
+                        style={{ paddingLeft: '38px', fontFamily: showPassword ? 'inherit' : 'monospace' }}
+                        value={gmailForm.pass}
+                        onChange={(e) => setGmailForm({ ...gmailForm, pass: e.target.value })}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setShowPassword(!showPassword)}
+                      title={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Do NOT enter your normal Google account login password. Use the 16-character App Password generated above.
+                  </span>
+                </div>
+
+                {/* Sender Display Name */}
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontWeight: 600 }}>
+                    Sender Display Name (From Name)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Acme Sales Team or Shubham Shrivastava"
+                    className="form-input"
+                    value={gmailForm.fromName}
+                    onChange={(e) => setGmailForm({ ...gmailForm, fromName: e.target.value })}
+                  />
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    The sender name that will appear in your lead/staff inboxes (e.g. "{gmailForm.fromName || user?.companyName || 'Zokep CRM'} &lt;{gmailForm.user || 'your-email@gmail.com'}&gt;").
+                  </span>
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={savingGmail}
+                  >
+                    {savingGmail ? (
+                      <>
+                        <Loader2 size={16} className="spin-icon" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={16} />
+                        <span>Save Gmail Credentials</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => {
+                      setTestResult(null);
+                      setTestEmailRecipient(gmailForm.user || user?.email || '');
+                      setTestModalOpen(true);
+                    }}
+                    disabled={!gmailForm.user || (!gmailForm.pass && !gmailForm.hasPassword)}
+                  >
+                    <Send size={15} style={{ color: '#ea4335' }} />
+                    <span>🧪 Send Test Verification Email</span>
+                  </button>
+
+                  {gmailForm.isConfigured && (
+                    <button
+                      type="button"
+                      className="btn btn-danger"
+                      onClick={handleDisableGmailSmtp}
+                      disabled={savingGmail}
+                      style={{ marginLeft: 'auto' }}
+                    >
+                      <Trash2 size={14} />
+                      <span>Disable Custom Gmail</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </form>
           </div>
         )}
 
@@ -1260,6 +1571,73 @@ Content-Type: application/json
             </span>
           </div>
         </form>
+      </Modal>
+
+      {/* TEST GMAIL SMTP MODAL */}
+      <Modal
+        isOpen={testModalOpen}
+        onClose={() => setTestModalOpen(false)}
+        title="🧪 Test Gmail SMTP Credentials"
+        footer={
+          <>
+            <button className="btn btn-secondary" onClick={() => setTestModalOpen(false)} disabled={testingGmail}>
+              Close
+            </button>
+            <button className="btn btn-primary" onClick={handleTestGmailSmtp} disabled={testingGmail || !gmailForm.user || (!gmailForm.pass && !gmailForm.hasPassword)}>
+              {testingGmail ? (
+                <>
+                  <Loader2 size={16} className="spin-icon" />
+                  <span>Connecting to Gmail...</span>
+                </>
+              ) : (
+                <>
+                  <Send size={14} />
+                  <span>Send Test Email</span>
+                </>
+              )}
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+            Enter a recipient email address to send a live test message and verify that your Gmail SMTP connection and App Password are authenticated properly.
+          </p>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Recipient Email Address *</label>
+            <input
+              type="email"
+              required
+              placeholder="e.g. yourname@example.com"
+              className="form-input"
+              value={testEmailRecipient}
+              onChange={(e) => setTestEmailRecipient(e.target.value)}
+            />
+          </div>
+
+          {testResult && (
+            <div
+              style={{
+                padding: '14px 16px',
+                borderRadius: '8px',
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+                background: testResult.success ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                border: `1px solid ${testResult.success ? '#10b981' : '#ef4444'}`,
+                color: testResult.success ? '#059669' : '#dc2626',
+              }}
+            >
+              {testResult.success ? <CheckCircle2 size={18} style={{ flexShrink: 0, marginTop: 2 }} /> : <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />}
+              <div>
+                <strong>{testResult.success ? 'Verification Succeeded!' : 'SMTP Connection Failed'}</strong>
+                <div style={{ marginTop: '2px', fontSize: '12px' }}>{testResult.message}</div>
+              </div>
+            </div>
+          )}
+        </div>
       </Modal>
     </div>
   );

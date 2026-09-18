@@ -69,6 +69,27 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Tenant-specific Gmail SMTP credentials
+    gmailSmtp: {
+      user: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      pass: {
+        type: String,
+        default: '',
+      },
+      fromName: {
+        type: String,
+        trim: true,
+        default: '',
+      },
+      isConfigured: {
+        type: Boolean,
+        default: false,
+      },
+    },
   },
   {
     timestamps: true,

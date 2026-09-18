@@ -81,37 +81,59 @@ export const CheckoutPage = () => {
     try {
       setLoading(true);
 
-      // 1. Create Razorpay order on backend
+      // 1. Ensure Razorpay SDK is loaded
+      await loadRazorpayScript();
+
+      // 2. Create Razorpay order on backend
       const orderRes = await api.post('/subscriptions/create-order', {
         planId: selectedPlan._id,
         billingCycle: selectedPlan.billingCycle || billingParam,
+        userEmail: formData.email,
+        companyName: formData.companyName,
       });
 
-      const { order, keyId } = orderRes;
+      if (!orderRes.success) {
+        throw new Error(orderRes.message || 'Failed to generate payment order');
+      }
 
-      // 2. If live Razorpay is active
+      const { order, keyId, isLive } = orderRes;
+
+      // 3. If live Razorpay SDK is active and configured
       if (
         window.Razorpay &&
         keyId &&
-        keyId !== 'rzp_test_placeholder_key_id' &&
-        !order.mockMode
+        !keyId.includes('placeholder') &&
+        !order.mockMode &&
+        order.amount > 0
       ) {
         const options = {
           key: keyId,
           amount: order.amount,
           currency: order.currency || 'INR',
           name: 'Zokep CRM',
-          description: `Subscription: ${selectedPlan.name}`,
+          description: `Subscription: ${selectedPlan.name} (${selectedPlan.billingCycle || billingParam})`,
           order_id: order.id,
           prefill: {
             name: formData.name,
             email: formData.email,
             contact: formData.phone,
           },
+          notes: {
+            planId: selectedPlan._id,
+            companyName: formData.companyName,
+          },
+          theme: { color: '#4f46e5' },
+          modal: {
+            ondismiss: () => {
+              setLoading(false);
+            },
+            escape: true,
+            animation: true,
+          },
           handler: async (response) => {
             try {
-              // Complete registration with verified payment details
-              const regRes = await registerAdmin({
+              // Complete registration with verified Razorpay payment signature
+              await registerAdmin({
                 ...formData,
                 planId: selectedPlan._id,
                 billingCycle: selectedPlan.billingCycle || billingParam,
@@ -126,23 +148,29 @@ export const CheckoutPage = () => {
               navigate('/admin');
             } catch (err) {
               error(err.message || 'Registration failed after payment');
+            } finally {
+              setLoading(false);
             }
           },
-          theme: { color: '#4f46e5' },
         };
 
         const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', (resp) => {
+          console.error('[Razorpay Checkout Error]:', resp.error);
+          error(resp.error?.description || 'Payment was declined or failed. Please try another payment method.');
+          setLoading(false);
+        });
+
         rzp.open();
-        setLoading(false);
       } else {
-        // Run Instant Simulator & Register
+        // Run Instant Simulator & Register (for free tier or dev testing)
         setTimeout(async () => {
           try {
-            const regRes = await registerAdmin({
+            await registerAdmin({
               ...formData,
               planId: selectedPlan._id,
               billingCycle: selectedPlan.billingCycle || billingParam,
-              paymentMethod: 'razorpay',
+              paymentMethod: order.amount === 0 ? 'free_trial' : 'razorpay',
               paymentReference: `PAY_SIM_${Date.now()}`,
               razorpayOrderId: order.id,
               razorpayPaymentId: `pay_sim_${Date.now()}`,

@@ -4,7 +4,7 @@ import Template from '../models/Template.js';
 import Lead from '../models/Lead.js';
 import User from '../models/User.js';
 import ActivityLog from '../models/ActivityLog.js';
-import { sendCustomLeadEmail } from '../utils/mailer.js';
+import { sendCustomLeadEmail, testTenantGmailConnection } from '../utils/mailer.js';
 
 // ==================== LEAD STATUSES ====================
 
@@ -255,7 +255,8 @@ export const sendLeadEmailWithTemplate = async (req, res) => {
       to: lead.email,
       subject: finalSubject,
       html: `<div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">${finalBody}</div>`,
-      fromName: adminUser?.companyName || 'Zokep CRM',
+      fromName: adminUser?.gmailSmtp?.fromName || adminUser?.companyName || 'Zokep CRM',
+      tenantId,
     });
 
     // Record activity log
@@ -275,8 +276,136 @@ export const sendLeadEmailWithTemplate = async (req, res) => {
       success: true,
       message: 'Email dispatched successfully to lead!',
       mock: result.mock,
+      isTenantCustom: result.isTenantCustom,
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ==================== TENANT GMAIL SMTP SETTINGS ====================
+
+// @desc    Get tenant Gmail SMTP credentials (password masked)
+// @route   GET /api/settings/gmail-smtp
+// @access  Private (Admin)
+export const getGmailSmtpSettings = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const adminUser = await User.findById(tenantId);
+    if (!adminUser) {
+      return res.status(404).json({ success: false, message: 'Tenant admin not found' });
+    }
+
+    const gmailSmtp = adminUser.gmailSmtp || {};
+    return res.json({
+      success: true,
+      data: {
+        user: gmailSmtp.user || '',
+        fromName: gmailSmtp.fromName || adminUser.companyName || '',
+        isConfigured: !!gmailSmtp.isConfigured,
+        hasPassword: !!gmailSmtp.pass,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Save/Update tenant Gmail SMTP credentials
+// @route   POST /api/settings/gmail-smtp
+// @access  Private (Admin)
+export const saveGmailSmtpSettings = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { user, pass, fromName, isConfigured } = req.body;
+
+    const adminUser = await User.findById(tenantId);
+    if (!adminUser) {
+      return res.status(404).json({ success: false, message: 'Tenant admin not found' });
+    }
+
+    const existingSmtp = adminUser.gmailSmtp || {};
+    let finalPass = existingSmtp.pass || '';
+
+    // If a new password string is provided and not masked dummy
+    if (pass && pass.trim() && pass !== '••••••••' && pass !== '********') {
+      finalPass = pass.trim();
+    }
+
+    const cleanUser = user ? user.trim() : '';
+
+    if (isConfigured && (!cleanUser || !finalPass)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Both Gmail address (SMTP_USER) and App Password (SMTP_PASS) are required to enable custom email.',
+      });
+    }
+
+    adminUser.gmailSmtp = {
+      user: cleanUser,
+      pass: finalPass,
+      fromName: fromName ? fromName.trim() : (adminUser.companyName || ''),
+      isConfigured: isConfigured !== undefined ? !!isConfigured : (Boolean(cleanUser && finalPass)),
+    };
+
+    await adminUser.save();
+
+    return res.json({
+      success: true,
+      message: 'Gmail SMTP settings saved successfully!',
+      data: {
+        user: adminUser.gmailSmtp.user,
+        fromName: adminUser.gmailSmtp.fromName,
+        isConfigured: adminUser.gmailSmtp.isConfigured,
+        hasPassword: !!adminUser.gmailSmtp.pass,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Test Gmail SMTP credentials live
+// @route   POST /api/settings/gmail-smtp/test
+// @access  Private (Admin)
+export const testGmailSmtpSettings = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { user, pass, fromName, testRecipient } = req.body;
+
+    const adminUser = await User.findById(tenantId);
+    if (!adminUser) {
+      return res.status(404).json({ success: false, message: 'Tenant admin not found' });
+    }
+
+    const cleanUser = (user && user.trim()) || adminUser.gmailSmtp?.user;
+    let cleanPass = pass && pass.trim() && pass !== '••••••••' && pass !== '********'
+      ? pass.trim()
+      : adminUser.gmailSmtp?.pass;
+
+    if (!cleanUser || !cleanPass) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide both a Gmail address (SMTP_USER) and an App Password (SMTP_PASS) to test.',
+      });
+    }
+
+    const result = await testTenantGmailConnection({
+      user: cleanUser,
+      pass: cleanPass,
+      testRecipient: testRecipient || cleanUser,
+      senderName: fromName || adminUser.gmailSmtp?.fromName || adminUser.companyName || 'Zokep CRM',
+    });
+
+    return res.json({
+      success: true,
+      message: `Test email sent successfully to ${result.recipient}!`,
+      data: result,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || 'Failed to authenticate with Gmail SMTP. Check your App Password.',
+    });
   }
 };
