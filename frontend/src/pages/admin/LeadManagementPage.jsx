@@ -418,6 +418,89 @@ export const LeadManagementPage = () => {
     }
   };
 
+  const handleDownloadSampleCSV = async () => {
+    try {
+      try {
+        const blob = await api.get('/leads/sample-csv');
+        if (blob && blob instanceof Blob) {
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', 'sample_lead_import_template.csv');
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          window.URL.revokeObjectURL(url);
+          success('Sample CSV template downloaded successfully!');
+          return;
+        }
+      } catch (errApi) {
+        console.warn('Backend sample CSV fallback:', errApi);
+      }
+
+      // Client-side fallback generator
+      const headers = ['Name', 'Phone', 'Email', 'Company', 'Deal Value', 'Lead Source', 'Notes'];
+      if (Array.isArray(customFields) && customFields.length > 0) {
+        customFields.forEach((cf) => {
+          headers.push(cf.fieldLabel || cf.fieldName);
+        });
+      }
+
+      const sampleRows = [
+        [
+          'Rahul Sharma',
+          '+919876543210',
+          'rahul.sharma@example.com',
+          'Acme Innovations Pvt Ltd',
+          '50000',
+          'meta_ads',
+          'Looking for multi-user CRM with WhatsApp integration',
+          ...customFields.map((cf) => (cf.fieldType === 'number' ? '10' : cf.fieldType === 'date' ? '2026-10-15' : 'Sample Value')),
+        ],
+        [
+          'Priya Patel',
+          '+919812345678',
+          'priya.patel@techcorp.in',
+          'TechCorp Solutions',
+          '75000',
+          'website_form',
+          'Requested live product demo for 15 sales reps',
+          ...customFields.map((cf) => (cf.fieldType === 'number' ? '20' : cf.fieldType === 'date' ? '2026-10-20' : 'Sample Value')),
+        ],
+        [
+          'Amit Verma',
+          '+919700112233',
+          'amit.verma@globalventures.com',
+          'Global Ventures',
+          '30000',
+          'whatsapp',
+          'Contacted via direct WhatsApp ad campaign',
+          ...customFields.map((cf) => (cf.fieldType === 'number' ? '30' : cf.fieldType === 'date' ? '2026-11-01' : 'Sample Value')),
+        ],
+      ];
+
+      const csvContent = [
+        headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(','),
+        ...sampleRows.map((row) =>
+          row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+        ),
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sample_lead_import_template.csv');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      success('Sample CSV template downloaded successfully!');
+    } catch (err) {
+      error('Failed to generate sample CSV');
+    }
+  };
+
   const handleBulkUpload = async (e) => {
     e.preventDefault();
     if (!csvFile) {
@@ -1342,32 +1425,62 @@ export const LeadManagementPage = () => {
         onClose={() => setUploadModalOpen(false)}
         title="Bulk Import Leads via CSV"
         footer={
-          <>
-            <button className="btn btn-secondary" onClick={() => setUploadModalOpen(false)} disabled={uploading}>
-              Cancel
+          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={handleDownloadSampleCSV}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Download size={14} color="#4f46e5" />
+              <span>Download Sample CSV</span>
             </button>
-            <button className="btn btn-primary" onClick={handleBulkUpload} disabled={uploading || !csvFile}>
-              {uploading ? (
-                <>
-                  <span className="btn-spinner" />
-                  <span>Importing CSV...</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={16} />
-                  <span>Start Import</span>
-                </>
-              )}
-            </button>
-          </>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn btn-secondary" onClick={() => setUploadModalOpen(false)} disabled={uploading}>
+                Cancel
+              </button>
+              <button className="btn btn-primary" onClick={handleBulkUpload} disabled={uploading || !csvFile}>
+                {uploading ? (
+                  <>
+                    <span className="btn-spinner" />
+                    <span>Importing CSV...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload size={16} />
+                    <span>Start Import</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-            Upload a CSV file containing lead records. Columns supported include <code>Name</code>, <code>Phone</code>, <code>Email</code>, <code>Company</code>, <code>Deal Value</code>, <code>Notes</code>, and custom fields.
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Sample CSV Download Prompt */}
+          <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>Need the correct format template?</strong>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                Download our pre-formatted sample CSV with columns and instructions.
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={handleDownloadSampleCSV}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            >
+              <Download size={14} color="#4f46e5" />
+              <span>Sample CSV</span>
+            </button>
+          </div>
+
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+            Upload a CSV file containing lead records. Columns supported include <code>Name</code>, <code>Phone</code>, <code>Email</code>, <code>Company</code>, <code>Deal Value</code>, <code>Lead Source</code>, <code>Notes</code>, and your dynamic custom fields.
           </p>
 
-          <div style={{ border: '2px dashed var(--border-medium)', padding: '24px', borderRadius: '12px', textAlign: 'center' }}>
+          <div style={{ border: '2px dashed var(--border-medium)', padding: '26px', borderRadius: '12px', textAlign: 'center', background: 'var(--bg-surface)' }}>
             <input
               type="file"
               accept=".csv"
@@ -1375,8 +1488,9 @@ export const LeadManagementPage = () => {
               style={{ display: 'block', margin: '0 auto' }}
             />
             {csvFile && (
-              <p style={{ marginTop: '8px', fontSize: '13px', color: '#10b981', fontWeight: 600 }}>
-                Selected: {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)
+              <p style={{ marginTop: '10px', fontSize: '13px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                <CheckCircle2 size={14} color="#10b981" />
+                <span>Selected: {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)</span>
               </p>
             )}
           </div>

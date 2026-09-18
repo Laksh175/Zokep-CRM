@@ -13,6 +13,7 @@ import {
   reassignLead,
   bulkUploadLeads,
   exportLeadsCSV,
+  getSampleLeadCSV,
   deleteLead,
 } from '../controllers/leadController.js';
 import { protect } from '../middleware/authMiddleware.js';
@@ -53,6 +54,7 @@ router.use(protect);
 
 router.get('/', authorize('admin', 'staff'), getLeads);
 router.get('/export-csv', authorize('admin', 'staff'), exportLeadsCSV);
+router.get('/sample-csv', authorize('admin', 'staff'), getSampleLeadCSV);
 router.get('/:id', authorize('admin', 'staff'), getLeadById);
 
 // Specific sub-resource actions

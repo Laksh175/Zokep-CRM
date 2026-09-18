@@ -722,6 +722,63 @@ export const exportLeadsCSV = async (req, res) => {
   }
 };
 
+// @desc    Download Sample CSV Template for Bulk Lead Import
+// @route   GET /api/leads/sample-csv
+// @access  Private (Admin & Staff)
+export const getSampleLeadCSV = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const customFields = await CustomField.find({ tenantId });
+
+    const sampleRows = [
+      {
+        Name: 'Rahul Sharma',
+        Phone: '+919876543210',
+        Email: 'rahul.sharma@example.com',
+        Company: 'Acme Innovations Pvt Ltd',
+        'Deal Value': 50000,
+        Source: 'meta_ads',
+        Notes: 'Looking for multi-user CRM with WhatsApp integration',
+      },
+      {
+        Name: 'Priya Patel',
+        Phone: '+919812345678',
+        Email: 'priya.patel@techcorp.in',
+        Company: 'TechCorp Solutions',
+        'Deal Value': 75000,
+        Source: 'website_form',
+        Notes: 'Requested live product demo for 15 sales reps',
+      },
+      {
+        Name: 'Amit Verma',
+        Phone: '+919700112233',
+        Email: 'amit.verma@globalventures.com',
+        Company: 'Global Ventures',
+        'Deal Value': 30000,
+        Source: 'whatsapp',
+        Notes: 'Contacted via direct WhatsApp ad campaign',
+      },
+    ];
+
+    if (customFields && customFields.length > 0) {
+      sampleRows.forEach((row, idx) => {
+        customFields.forEach((cf) => {
+          row[cf.fieldLabel || cf.fieldName] = cf.fieldType === 'number' ? (idx + 1) * 10 : cf.fieldType === 'date' ? '2026-10-15' : 'Sample Value';
+        });
+      });
+    }
+
+    const json2csvParser = new Json2CsvParser();
+    const csvData = json2csvParser.parse(sampleRows);
+
+    res.header('Content-Type', 'text/csv');
+    res.attachment('sample_lead_import_template.csv');
+    return res.send(csvData);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Delete single lead
 // @route   DELETE /api/leads/:id
 // @access  Private (Admin Only)

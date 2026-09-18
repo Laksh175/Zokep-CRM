@@ -57,29 +57,31 @@ import IndustriesPage from './pages/landing/IndustriesPage';
 import PricingPage from './pages/landing/PricingPage';
 import FAQPage from './pages/landing/FAQPage';
 
+import { lazyWithRetry } from './utils/lazyWithRetry';
+
 // Lazy Loaded Auth & Special Public Pages
-const CheckoutPage = lazy(() => import('./pages/landing/CheckoutPage'));
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const PublicLeadFormPage = lazy(() => import('./pages/public/PublicLeadFormPage'));
+const CheckoutPage = lazyWithRetry(() => import('./pages/landing/CheckoutPage'), 'checkout');
+const LoginPage = lazyWithRetry(() => import('./pages/auth/LoginPage'), 'login');
+const PublicLeadFormPage = lazyWithRetry(() => import('./pages/public/PublicLeadFormPage'), 'public-lead-form');
 
 // Lazy Loaded Super Admin Pages
-const SuperAdminDashboard = lazy(() => import('./pages/superadmin/SuperAdminDashboard'));
-const AdminManagementPage = lazy(() => import('./pages/superadmin/AdminManagementPage'));
-const PlanManagementPage = lazy(() => import('./pages/superadmin/PlanManagementPage'));
+const SuperAdminDashboard = lazyWithRetry(() => import('./pages/superadmin/SuperAdminDashboard'), 'superadmin-dash');
+const AdminManagementPage = lazyWithRetry(() => import('./pages/superadmin/AdminManagementPage'), 'admin-management');
+const PlanManagementPage = lazyWithRetry(() => import('./pages/superadmin/PlanManagementPage'), 'plan-management');
 
 // Lazy Loaded Tenant Admin Pages
-const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
-const LeadManagementPage = lazy(() => import('./pages/admin/LeadManagementPage'));
-const StaffManagementPage = lazy(() => import('./pages/admin/StaffManagementPage'));
-const CustomerListPage = lazy(() => import('./pages/admin/CustomerListPage'));
-const SettingsPage = lazy(() => import('./pages/admin/SettingsPage'));
-const SubscriptionPlanPage = lazy(() => import('./pages/admin/SubscriptionPlanPage'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'), 'admin-dash');
+const LeadManagementPage = lazyWithRetry(() => import('./pages/admin/LeadManagementPage'), 'lead-management');
+const StaffManagementPage = lazyWithRetry(() => import('./pages/admin/StaffManagementPage'), 'staff-management');
+const CustomerListPage = lazyWithRetry(() => import('./pages/admin/CustomerListPage'), 'customer-list');
+const SettingsPage = lazyWithRetry(() => import('./pages/admin/SettingsPage'), 'settings');
+const SubscriptionPlanPage = lazyWithRetry(() => import('./pages/admin/SubscriptionPlanPage'), 'subscription-plan');
 
 // Lazy Loaded Staff Pages
-const StaffDashboard = lazy(() => import('./pages/staff/StaffDashboard'));
-const StaffFollowupsPage = lazy(() => import('./pages/staff/StaffFollowupsPage'));
-const StaffLeadsPage = lazy(() => import('./pages/staff/StaffLeadsPage'));
-const StaffCustomersPage = lazy(() => import('./pages/staff/StaffCustomersPage'));
+const StaffDashboard = lazyWithRetry(() => import('./pages/staff/StaffDashboard'), 'staff-dash');
+const StaffFollowupsPage = lazyWithRetry(() => import('./pages/staff/StaffFollowupsPage'), 'staff-followups');
+const StaffLeadsPage = lazyWithRetry(() => import('./pages/staff/StaffLeadsPage'), 'staff-leads');
+const StaffCustomersPage = lazyWithRetry(() => import('./pages/staff/StaffCustomersPage'), 'staff-customers');
 
 // Protected Layout with Sidebar
 const ProtectedLayout = ({ allowedRoles, children }) => {
