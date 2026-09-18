@@ -17,6 +17,9 @@ import {
   Send,
   MoreVertical,
   CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  FileText,
   Clock,
   ArrowRight,
   ExternalLink,
@@ -105,6 +108,7 @@ export const LeadManagementPage = () => {
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [csvFile, setCsvFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [importResult, setImportResult] = useState(null);
 
   useEffect(() => {
     fetchMetadata();
@@ -502,7 +506,7 @@ export const LeadManagementPage = () => {
   };
 
   const handleBulkUpload = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!csvFile) {
       error('Please select a CSV file to upload');
       return;
@@ -515,9 +519,17 @@ export const LeadManagementPage = () => {
 
       const res = await api.upload('/leads/bulk-upload', formData);
       if (res.success) {
-        success(res.message);
-        setUploadModalOpen(false);
-        setCsvFile(null);
+        setImportResult(res.data);
+        if (res.data?.skippedCount === 0) {
+          success(res.message || `Successfully imported all ${res.data.importedCount} leads!`);
+          try {
+            confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
+          } catch (e) {
+            // ignore
+          }
+        } else {
+          info(res.message || `Import completed: ${res.data?.importedCount || 0} imported, ${res.data?.skippedCount || 0} skipped.`);
+        }
         fetchLeads(1, limit);
       }
     } catch (err) {
@@ -1422,79 +1434,208 @@ export const LeadManagementPage = () => {
       {/* BULK CSV UPLOAD MODAL */}
       <Modal
         isOpen={uploadModalOpen}
-        onClose={() => setUploadModalOpen(false)}
-        title="Bulk Import Leads via CSV"
+        onClose={() => {
+          setUploadModalOpen(false);
+          setImportResult(null);
+          setCsvFile(null);
+        }}
+        title={importResult ? 'Bulk Import Results Summary' : 'Bulk Import Leads via CSV'}
+        maxWidth={importResult ? '760px' : '580px'}
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleDownloadSampleCSV}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-            >
-              <Download size={14} color="#4f46e5" />
-              <span>Download Sample CSV</span>
-            </button>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className="btn btn-secondary" onClick={() => setUploadModalOpen(false)} disabled={uploading}>
-                Cancel
+          importResult ? (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  setImportResult(null);
+                  setCsvFile(null);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <RefreshCw size={14} />
+                <span>Import Another CSV</span>
               </button>
-              <button className="btn btn-primary" onClick={handleBulkUpload} disabled={uploading || !csvFile}>
-                {uploading ? (
-                  <>
-                    <span className="btn-spinner" />
-                    <span>Importing CSV...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload size={16} />
-                    <span>Start Import</span>
-                  </>
-                )}
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => {
+                  setUploadModalOpen(false);
+                  setImportResult(null);
+                  setCsvFile(null);
+                }}
+              >
+                Done & View Pipeline
               </button>
             </div>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={handleDownloadSampleCSV}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} color="#4f46e5" />
+                <span>Download Sample CSV</span>
+              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setUploadModalOpen(false);
+                    setCsvFile(null);
+                  }}
+                  disabled={uploading}
+                >
+                  Cancel
+                </button>
+                <button className="btn btn-primary" onClick={handleBulkUpload} disabled={uploading || !csvFile}>
+                  {uploading ? (
+                    <>
+                      <span className="btn-spinner" />
+                      <span>Importing CSV...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload size={16} />
+                      <span>Start Import</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Sample CSV Download Prompt */}
-          <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div>
-              <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>Need the correct format template?</strong>
-              <span style={{ fontSize: '12px', color: '#64748b' }}>
-                Download our pre-formatted sample CSV with columns and instructions.
-              </span>
+        {importResult ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* KPI Summary Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Total Rows</div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)' }}>{importResult.totalProcessed}</div>
+              </div>
+              <div style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: '#047857', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Successfully Imported</div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <CheckCircle2 size={18} color="#059669" />
+                  <span>{importResult.importedCount}</span>
+                </div>
+              </div>
+              <div style={{ background: importResult.skippedCount > 0 ? '#fff1f2' : '#f8fafc', border: `1px solid ${importResult.skippedCount > 0 ? '#fecdd3' : '#e2e8f0'}`, borderRadius: '10px', padding: '14px', textAlign: 'center' }}>
+                <div style={{ fontSize: '11px', color: importResult.skippedCount > 0 ? '#b91c1c' : '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '4px' }}>Skipped / Errors</div>
+                <div style={{ fontSize: '22px', fontWeight: 800, color: importResult.skippedCount > 0 ? '#e11d48' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  {importResult.skippedCount > 0 ? <AlertTriangle size={18} color="#e11d48" /> : <CheckCircle2 size={18} color="#94a3b8" />}
+                  <span>{importResult.skippedCount}</span>
+                </div>
+              </div>
             </div>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              onClick={handleDownloadSampleCSV}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-            >
-              <Download size={14} color="#4f46e5" />
-              <span>Sample CSV</span>
-            </button>
-          </div>
 
-          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
-            Upload a CSV file containing lead records. Columns supported include <code>Name</code>, <code>Phone</code>, <code>Email</code>, <code>Company</code>, <code>Deal Value</code>, <code>Lead Source</code>, <code>Notes</code>, and your dynamic custom fields.
-          </p>
+            {/* Success state banner if 0 errors */}
+            {importResult.skippedCount === 0 && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <CheckCircle2 size={24} color="#16a34a" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#15803d', fontSize: '14px', display: 'block' }}>All leads imported cleanly!</strong>
+                  <span style={{ fontSize: '12px', color: '#166534' }}>
+                    Every record met required field formats and was assigned default pipeline status.
+                  </span>
+                </div>
+              </div>
+            )}
 
-          <div style={{ border: '2px dashed var(--border-medium)', padding: '26px', borderRadius: '12px', textAlign: 'center', background: 'var(--bg-surface)' }}>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={(e) => setCsvFile(e.target.files[0])}
-              style={{ display: 'block', margin: '0 auto' }}
-            />
-            {csvFile && (
-              <p style={{ marginTop: '10px', fontSize: '13px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                <CheckCircle2 size={14} color="#10b981" />
-                <span>Selected: {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)</span>
-              </p>
+            {/* Error table if skippedCount > 0 */}
+            {importResult.errors && importResult.errors.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={16} color="#e11d48" />
+                  <strong style={{ fontSize: '13px', color: '#991b1b' }}>
+                    Validation Error Breakdown ({importResult.errors.length} skipped {importResult.errors.length === 1 ? 'row' : 'rows'}):
+                  </strong>
+                </div>
+                <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #fecdd3', borderRadius: '8px', background: '#fff' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#fff1f2', borderBottom: '1px solid #fecdd3' }}>
+                        <th style={{ padding: '8px 12px', color: '#9f1239', fontWeight: 700, width: '70px' }}>Row #</th>
+                        <th style={{ padding: '8px 12px', color: '#9f1239', fontWeight: 700, width: '140px' }}>Name</th>
+                        <th style={{ padding: '8px 12px', color: '#9f1239', fontWeight: 700, width: '120px' }}>Phone</th>
+                        <th style={{ padding: '8px 12px', color: '#9f1239', fontWeight: 700 }}>Failure Reason</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importResult.errors.map((errItem, idx) => (
+                        <tr key={idx} style={{ borderBottom: idx < importResult.errors.length - 1 ? '1px solid #ffe4e6' : 'none', background: idx % 2 === 0 ? '#fff' : '#fff5f6' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 700, color: '#e11d48' }}>Row {errItem.row}</td>
+                          <td style={{ padding: '8px 12px', color: '#334155', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={errItem.name}>
+                            {errItem.name || '(Empty)'}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#334155', fontFamily: 'monospace' }}>
+                            {errItem.phone || '-'}
+                          </td>
+                          <td style={{ padding: '8px 12px', color: '#b91c1c', fontWeight: 500 }}>
+                            {errItem.reason}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Tip: Fix the highlighted issues in your CSV spreadsheet and re-upload to import the remaining leads.
+                </p>
+              </div>
             )}
           </div>
-        </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Sample CSV Download Prompt */}
+            <div style={{ background: '#f8fafc', padding: '14px 18px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>Need the correct format template?</strong>
+                <span style={{ fontSize: '12px', color: '#64748b' }}>
+                  Download our pre-formatted sample CSV with columns and instructions.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={handleDownloadSampleCSV}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+              >
+                <Download size={14} color="#4f46e5" />
+                <span>Sample CSV</span>
+              </button>
+            </div>
+
+            {/* Validation Rules Card */}
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>Field Validation Rules:</strong>
+              <ul style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.6 }}>
+                <li><strong>Name</strong>: Required (minimum 2 characters).</li>
+                <li><strong>Phone</strong>: Required (valid 7 to 15 digit international/local number).</li>
+                <li><strong>Email</strong>: Optional (if provided, must be a valid email format).</li>
+                <li><strong>Deal Value / Source</strong>: Optional (currency symbols automatically cleaned; sources normalized).</li>
+              </ul>
+            </div>
+
+            <div style={{ border: '2px dashed var(--border-medium)', padding: '24px', borderRadius: '12px', textAlign: 'center', background: 'var(--bg-surface)' }}>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCsvFile(e.target.files[0])}
+                style={{ display: 'block', margin: '0 auto' }}
+              />
+              {csvFile && (
+                <p style={{ marginTop: '10px', fontSize: '13px', color: '#10b981', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                  <CheckCircle2 size={14} color="#10b981" />
+                  <span>Selected: {csvFile.name} ({(csvFile.size / 1024).toFixed(1)} KB)</span>
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </Modal>
 
       {/* 1-CLICK WHATSAPP MODAL */}

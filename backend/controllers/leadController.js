@@ -6,6 +6,7 @@ import LeadStatus from '../models/LeadStatus.js';
 import CustomField from '../models/CustomField.js';
 import ActivityLog from '../models/ActivityLog.js';
 import User from '../models/User.js';
+import Subscription from '../models/Subscription.js';
 import { formatDate } from '../utils/dateFormatter.js';
 
 // @desc    Get all leads with advanced filtering & role scoping
@@ -578,11 +579,43 @@ export const bulkUploadLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'Please upload a CSV file' });
+      return res.status(400).json({ success: false, message: 'Please select a valid CSV file to upload.' });
+    }
+
+    // 1. Fetch Subscription & Capacity
+    const sub = await Subscription.findOne({ tenantId, status: { $in: ['active', 'grace_period'] } })
+      .populate('planId', 'leadLimit name')
+      .sort({ endDate: -1 });
+
+    const planLimit = sub?.planId?.leadLimit ?? -1;
+    const currentLeadCount = await Lead.countDocuments({ tenantId });
+    const remainingCapacity = planLimit === -1 ? Infinity : Math.max(0, planLimit - currentLeadCount);
+
+    if (remainingCapacity <= 0 && planLimit !== -1) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(403).json({
+        success: false,
+        message: `Your subscription plan (${sub?.planId?.name || 'Current Plan'}) has reached its limit of ${planLimit} total leads. Please upgrade your plan to import additional leads.`,
+      });
     }
 
     const customFields = await CustomField.find({ tenantId });
-    const defaultStatus = await LeadStatus.findOne({ tenantId, isDefault: true }) || (await LeadStatus.findOne({ tenantId }).sort({ order: 1 }));
+    const defaultStatus =
+      (await LeadStatus.findOne({ tenantId, isDefault: true })) ||
+      (await LeadStatus.findOne({ tenantId }).sort({ order: 1 }));
+
+    const validSources = [
+      'manual',
+      'meta_ads',
+      'google_ads',
+      'whatsapp',
+      'website_form',
+      'referral',
+      'cold_call',
+      'walk_in',
+      'csv_import',
+      'other',
+    ];
 
     const results = [];
     fs.createReadStream(req.file.path)
@@ -590,51 +623,190 @@ export const bulkUploadLeads = async (req, res) => {
       .on('data', (data) => results.push(data))
       .on('end', async () => {
         try {
-          fs.unlinkSync(req.file.path); // remove temp file
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+
+          if (results.length === 0) {
+            return res.status(400).json({
+              success: false,
+              message: 'The uploaded CSV file is empty or formatted incorrectly.',
+            });
+          }
 
           let importedCount = 0;
           let skippedCount = 0;
+          const errors = [];
 
-          for (const row of results) {
-            // Find fields flexibly (case insensitive keys)
+          for (let i = 0; i < results.length; i++) {
+            const row = results[i];
+            const rowNum = i + 2; // Row 1 is header in CSV files
+
+            // Helper to find column case-insensitively
             const getVal = (possibleKeys) => {
               for (const k of Object.keys(row)) {
-                if (possibleKeys.includes(k.toLowerCase().trim())) return row[k];
+                if (possibleKeys.includes(k.toLowerCase().trim())) {
+                  return typeof row[k] === 'string' ? row[k].trim() : String(row[k] ?? '').trim();
+                }
               }
               return '';
             };
 
-            const name = getVal(['name', 'lead name', 'full name', 'contact name']);
-            const phone = getVal(['phone', 'mobile', 'contact', 'phone number', 'cell']);
-            const email = getVal(['email', 'email address', 'mail']);
-            const company = getVal(['company', 'organization', 'company name', 'business']);
-            const dealValue = getVal(['deal value', 'dealvalue', 'value', 'budget', 'amount', 'price']);
-            const notes = getVal(['notes', 'note', 'remarks', 'requirement', 'description']);
+            const rawName = getVal(['name', 'lead name', 'full name', 'contact name', 'customer name']);
+            const rawPhone = getVal(['phone', 'mobile', 'contact', 'phone number', 'cell', 'telephone', 'mobile number']);
+            const rawEmail = getVal(['email', 'email address', 'mail', 'email id']);
+            const rawCompany = getVal(['company', 'organization', 'company name', 'business', 'org']);
+            const rawDealValue = getVal(['deal value', 'dealvalue', 'value', 'budget', 'amount', 'price', 'deal amount']);
+            const rawSource = getVal(['source', 'lead source', 'lead_source', 'channel', 'origin', 'lead origin']);
+            const rawPriority = getVal(['priority', 'urgency', 'level']);
+            const rawNotes = getVal(['notes', 'note', 'remarks', 'requirement', 'description', 'comments']);
 
-            if (!name || !phone) {
+            // 1. Validation: Name
+            if (!rawName) {
               skippedCount++;
+              errors.push({
+                row: rowNum,
+                name: '(Empty)',
+                phone: rawPhone || '-',
+                reason: 'Missing required field: Lead Name',
+              });
+              continue;
+            }
+            if (rawName.length < 2) {
+              skippedCount++;
+              errors.push({
+                row: rowNum,
+                name: rawName,
+                phone: rawPhone || '-',
+                reason: 'Lead Name must be at least 2 characters',
+              });
               continue;
             }
 
-            // Map custom fields
-            const customData = {};
-            for (const cf of customFields) {
-              const cfVal = getVal([cf.fieldName.toLowerCase(), cf.fieldLabel.toLowerCase()]);
-              if (cfVal) customData[cf.fieldName] = cfVal;
+            // 2. Validation: Phone
+            if (!rawPhone) {
+              skippedCount++;
+              errors.push({
+                row: rowNum,
+                name: rawName,
+                phone: '(Empty)',
+                reason: 'Missing required field: Phone Number',
+              });
+              continue;
             }
 
-            const sourceFromCsv = getVal(['source', 'lead source', 'lead_source', 'channel', 'lead origin']);
-            const source = sourceFromCsv || 'csv_import';
+            // Clean phone string (allow +, remove spaces, hyphens, parentheses, dots)
+            const cleanPhone = rawPhone.replace(/[\s\-\(\)\.]/g, '');
+            const digitCount = (cleanPhone.match(/\d/g) || []).length;
+            if (digitCount < 7 || digitCount > 16) {
+              skippedCount++;
+              errors.push({
+                row: rowNum,
+                name: rawName,
+                phone: rawPhone,
+                reason: `Invalid phone number format (${digitCount} digits detected; must contain 7-15 digits)`,
+              });
+              continue;
+            }
 
+            // 3. Validation: Email (Optional, but if present must be valid)
+            let email = '';
+            if (rawEmail) {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              if (emailRegex.test(rawEmail)) {
+                email = rawEmail.toLowerCase();
+              } else {
+                skippedCount++;
+                errors.push({
+                  row: rowNum,
+                  name: rawName,
+                  phone: rawPhone,
+                  reason: `Invalid email address format: "${rawEmail}"`,
+                });
+                continue;
+              }
+            }
+
+            // 4. Capacity Limit Enforcement
+            if (planLimit !== -1 && importedCount >= remainingCapacity) {
+              skippedCount++;
+              errors.push({
+                row: rowNum,
+                name: rawName,
+                phone: rawPhone,
+                reason: `Skipped: Plan limit of ${planLimit} total leads reached for your account.`,
+              });
+              continue;
+            }
+
+            // 5. Deal Value Sanitization
+            let dealValue = 0;
+            if (rawDealValue) {
+              const cleanVal = rawDealValue.replace(/[^\d.-]/g, '');
+              const parsed = parseFloat(cleanVal);
+              if (!isNaN(parsed) && parsed >= 0) {
+                dealValue = parsed;
+              }
+            }
+
+            // 6. Lead Source Normalization
+            let source = 'csv_import';
+            if (rawSource) {
+              const sLower = rawSource.toLowerCase().replace(/[\s-]/g, '_');
+              if (validSources.includes(sLower)) {
+                source = sLower;
+              } else if (sLower.includes('meta') || sLower.includes('facebook') || sLower.includes('fb') || sLower.includes('insta')) {
+                source = 'meta_ads';
+              } else if (sLower.includes('google') || sLower.includes('gads')) {
+                source = 'google_ads';
+              } else if (sLower.includes('whatsapp') || sLower.includes('wa')) {
+                source = 'whatsapp';
+              } else if (sLower.includes('web') || sLower.includes('site') || sLower.includes('form')) {
+                source = 'website_form';
+              } else if (sLower.includes('refer')) {
+                source = 'referral';
+              } else if (sLower.includes('call')) {
+                source = 'cold_call';
+              } else if (sLower.includes('walk')) {
+                source = 'walk_in';
+              }
+            }
+
+            // 7. Priority Normalization
+            let priority = 'medium';
+            if (rawPriority) {
+              const pLower = rawPriority.toLowerCase();
+              if (['low', 'medium', 'high', 'urgent'].includes(pLower)) {
+                priority = pLower;
+              }
+            }
+
+            // 8. Dynamic Custom Fields Mapping
+            const customData = {};
+            for (const cf of customFields) {
+              const val = getVal([cf.fieldName.toLowerCase(), cf.fieldLabel.toLowerCase()]);
+              if (val) {
+                if (cf.fieldType === 'number') {
+                  const num = Number(val.replace(/[^\d.-]/g, ''));
+                  customData[cf.fieldName] = isNaN(num) ? 0 : num;
+                } else if (cf.fieldType === 'date') {
+                  const d = new Date(val);
+                  customData[cf.fieldName] = isNaN(d.getTime()) ? val : d.toISOString().split('T')[0];
+                } else {
+                  customData[cf.fieldName] = val;
+                }
+              }
+            }
+
+            // Create Lead Record
             const lead = await Lead.create({
               tenantId,
-              name: name.trim(),
-              phone: String(phone).trim(),
-              email: email ? String(email).trim().toLowerCase() : '',
-              company: company ? String(company).trim() : '',
-              dealValue: Number(dealValue) || 0,
+              name: rawName,
+              phone: cleanPhone,
+              email,
+              company: rawCompany,
+              dealValue,
               source,
-              notes: notes ? String(notes).trim() : '',
+              priority,
+              notes: rawNotes,
               statusId: defaultStatus?._id || null,
               customFieldsData: customData,
             });
@@ -645,17 +817,26 @@ export const bulkUploadLeads = async (req, res) => {
               performedBy: req.user._id,
               type: 'created',
               title: 'Bulk Imported Lead',
-              note: 'Imported via CSV batch upload',
+              note: `Imported via CSV batch upload (Source: ${source})`,
             });
 
             importedCount++;
           }
 
+          const message =
+            skippedCount === 0
+              ? `Successfully imported all ${importedCount} leads!`
+              : `Import completed: ${importedCount} leads imported, ${skippedCount} rows skipped due to validation errors.`;
+
           return res.json({
             success: true,
-            message: `Successfully imported ${importedCount} leads (${skippedCount} skipped due to missing name/phone).`,
-            importedCount,
-            skippedCount,
+            message,
+            data: {
+              totalProcessed: results.length,
+              importedCount,
+              skippedCount,
+              errors,
+            },
           });
         } catch (err) {
           console.error('Bulk Import processing error:', err);
