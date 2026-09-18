@@ -998,13 +998,69 @@ export const deleteLead = async (req, res) => {
   }
 };
 
-// @desc    Bulk Delete Leads
+// @desc    Bulk Delete Leads (Specific IDs or All Matching Active Filters)
 // @route   POST /api/leads/bulk-delete
 // @access  Private (Admin Only)
 export const bulkDeleteLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const { leadIds } = req.body;
+    const {
+      leadIds,
+      selectAllMatching,
+      search,
+      statusId,
+      assignedTo,
+      source,
+      priority,
+      isConverted,
+    } = req.body;
+
+    if (selectAllMatching) {
+      const query = { tenantId };
+
+      if (req.user.role === 'staff') {
+        query.assignedTo = req.user._id;
+      } else if (assignedTo) {
+        if (assignedTo === 'unassigned') {
+          query.assignedTo = null;
+        } else {
+          query.assignedTo = assignedTo;
+        }
+      }
+
+      if (statusId) query.statusId = statusId;
+      if (source) query.source = source;
+      if (priority) query.priority = priority;
+      if (isConverted !== undefined) {
+        query.isConverted = isConverted === 'true' || isConverted === true;
+      }
+
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { phone: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { company: { $regex: search, $options: 'i' } },
+        ];
+      }
+
+      // Find matching lead IDs first to delete associated activity logs
+      const matchingLeads = await Lead.find(query).select('_id').lean();
+      const idsToDelete = matchingLeads.map((l) => l._id);
+
+      if (idsToDelete.length === 0) {
+        return res.json({ success: true, message: 'No matching leads found to delete', deletedCount: 0 });
+      }
+
+      await ActivityLog.deleteMany({ leadId: { $in: idsToDelete }, tenantId });
+      const result = await Lead.deleteMany({ _id: { $in: idsToDelete }, tenantId });
+
+      return res.json({
+        success: true,
+        message: `Successfully deleted all ${result.deletedCount} matching leads`,
+        deletedCount: result.deletedCount,
+      });
+    }
 
     if (!Array.isArray(leadIds) || leadIds.length === 0) {
       return res.status(400).json({ success: false, message: 'Please provide an array of lead IDs to delete' });

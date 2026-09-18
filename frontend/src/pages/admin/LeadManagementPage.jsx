@@ -113,6 +113,7 @@ export const LeadManagementPage = () => {
 
   // Bulk Select & Delete State
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
@@ -122,6 +123,8 @@ export const LeadManagementPage = () => {
 
   useEffect(() => {
     setPage(1);
+    setSelectedLeadIds([]);
+    setSelectAllAcrossPages(false);
     fetchLeads(1, limit);
   }, [statusFilter, assigneeFilter, sourceFilter, priorityFilter]);
 
@@ -352,17 +355,27 @@ export const LeadManagementPage = () => {
   // Bulk Selection Logic
   const allPageLeadIds = leads.map((l) => l._id);
   const isAllSelected = leads.length > 0 && allPageLeadIds.every((id) => selectedLeadIds.includes(id));
-  const isSomeSelected = leads.some((l) => selectedLeadIds.includes(l._id)) && !isAllSelected;
+  const isSomeSelected = (leads.some((l) => selectedLeadIds.includes(l._id)) || selectAllAcrossPages) && !isAllSelected;
 
   const handleToggleSelectAll = () => {
-    if (isAllSelected) {
+    if (isAllSelected || selectAllAcrossPages) {
       setSelectedLeadIds((prev) => prev.filter((id) => !allPageLeadIds.includes(id)));
+      setSelectAllAcrossPages(false);
     } else {
       setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...allPageLeadIds])));
+      setSelectAllAcrossPages(false);
     }
   };
 
+  const handleSelectAllAcrossPages = () => {
+    setSelectAllAcrossPages(true);
+    setSelectedLeadIds(allPageLeadIds);
+  };
+
   const handleToggleSelectLead = (id) => {
+    if (selectAllAcrossPages) {
+      setSelectAllAcrossPages(false);
+    }
     setSelectedLeadIds((prev) =>
       prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
     );
@@ -370,18 +383,32 @@ export const LeadManagementPage = () => {
 
   const handleClearSelection = () => {
     setSelectedLeadIds([]);
+    setSelectAllAcrossPages(false);
   };
 
   const handleBulkDelete = async () => {
-    if (selectedLeadIds.length === 0) return;
+    if (selectedLeadIds.length === 0 && !selectAllAcrossPages) return;
     try {
       setBulkDeleting(true);
-      const res = await api.post('/leads/bulk-delete', { leadIds: selectedLeadIds });
+      const payload = selectAllAcrossPages
+        ? {
+            selectAllMatching: true,
+            search,
+            statusId: statusFilter,
+            assignedTo: assigneeFilter,
+            source: sourceFilter,
+            priority: priorityFilter,
+          }
+        : { leadIds: selectedLeadIds };
+
+      const res = await api.post('/leads/bulk-delete', payload);
       if (res.success) {
-        success(res.message || `Successfully deleted ${selectedLeadIds.length} leads`);
+        success(res.message || 'Leads deleted successfully');
         setSelectedLeadIds([]);
+        setSelectAllAcrossPages(false);
         setBulkDeleteModalOpen(false);
-        fetchLeads(page, limit);
+        setPage(1);
+        fetchLeads(1, limit);
       }
     } catch (err) {
       error(err.message || 'Failed to delete selected leads');
@@ -758,7 +785,7 @@ export const LeadManagementPage = () => {
         {viewMode === 'table' && (
           <div className="glass-panel" style={{ padding: '20px' }}>
             {/* Bulk Selection Action Toolbar */}
-            {selectedLeadIds.length > 0 && (
+            {(selectedLeadIds.length > 0 || selectAllAcrossPages) && (
               <div
                 style={{
                   display: 'flex',
@@ -774,23 +801,51 @@ export const LeadManagementPage = () => {
                   gap: '12px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <span
                     style={{
-                      background: '#4f46e5',
+                      background: selectAllAcrossPages ? '#10b981' : '#4f46e5',
                       color: '#fff',
-                      padding: '3px 10px',
+                      padding: '4px 12px',
                       borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: 700,
                     }}
                   >
-                    {selectedLeadIds.length} Selected
+                    {selectAllAcrossPages ? `${totalLeads} Selected (All Pages)` : `${selectedLeadIds.length} Selected (Current Page)`}
                   </span>
-                  <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
-                    {selectedLeadIds.length === 1 ? '1 lead selected' : `${selectedLeadIds.length} leads selected`}
-                  </span>
+
+                  {selectAllAcrossPages ? (
+                    <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
+                      All <strong>{totalLeads}</strong> leads across all pages matching current filters are selected.
+                    </span>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
+                        All <strong>{selectedLeadIds.length}</strong> leads on this page are selected.
+                      </span>
+                      {totalLeads > leads.length && (
+                        <button
+                          type="button"
+                          onClick={handleSelectAllAcrossPages}
+                          style={{
+                            background: 'rgba(99, 102, 241, 0.25)',
+                            border: '1px solid #818cf8',
+                            color: '#a5b4fc',
+                            padding: '3px 10px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Select all {totalLeads} leads across all pages
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     type="button"
@@ -807,7 +862,7 @@ export const LeadManagementPage = () => {
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Trash2 size={14} />
-                    <span>Delete Selected ({selectedLeadIds.length})</span>
+                    <span>Delete {selectAllAcrossPages ? `All (${totalLeads})` : `Selected (${selectedLeadIds.length})`}</span>
                   </button>
                 </div>
               </div>
@@ -1922,7 +1977,7 @@ export const LeadManagementPage = () => {
               ) : (
                 <>
                   <Trash2 size={15} />
-                  <span>Permanently Delete ({selectedLeadIds.length})</span>
+                  <span>Permanently Delete ({selectAllAcrossPages ? totalLeads : selectedLeadIds.length})</span>
                 </>
               )}
             </button>
@@ -1933,11 +1988,13 @@ export const LeadManagementPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertTriangle size={24} color="#e11d48" style={{ flexShrink: 0 }} />
             <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-              Permanently delete {selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'selected lead' : 'selected leads'}?
+              Permanently delete {selectAllAcrossPages ? `all ${totalLeads} matching leads across all pages` : `${selectedLeadIds.length} ${selectedLeadIds.length === 1 ? 'selected lead' : 'selected leads'}`}?
             </strong>
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-            This will permanently remove the {selectedLeadIds.length} selected lead records along with all their timeline logs, follow-up history, and customer associations from your CRM database.
+            {selectAllAcrossPages
+              ? `This will permanently remove all ${totalLeads} leads matching your current active filters along with their timeline logs and activity history from your CRM database.`
+              : `This will permanently remove the ${selectedLeadIds.length} selected lead records along with all their timeline logs, follow-up history, and customer associations from your CRM database.`}
           </p>
           <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#9f1239' }}>
             <strong>Warning:</strong> This action is permanent and cannot be undone.
