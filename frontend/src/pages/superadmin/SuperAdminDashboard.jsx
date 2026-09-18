@@ -12,6 +12,7 @@ import {
   Sparkles,
   ArrowUpRight,
   BarChart2,
+  FileText,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -27,6 +28,7 @@ import {
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
+import InvoiceReceiptModal from '../../components/InvoiceReceiptModal';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
@@ -68,6 +70,10 @@ export const SuperAdminDashboard = () => {
   const { success, error } = useToast();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Invoice / Receipt Modal
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
 
   useEffect(() => {
     // 0ms Instant Cache Hydration for instant LCP paint
@@ -366,6 +372,7 @@ export const SuperAdminDashboard = () => {
                   <th>Status</th>
                   <th>Valid Until</th>
                   <th>Purchased On</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,6 +403,19 @@ export const SuperAdminDashboard = () => {
                     <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                       {formatDate(sub.createdAt)}
                     </td>
+                    <td>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setSelectedInvoiceSubId(sub._id);
+                          setReceiptModalOpen(true);
+                        }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                      >
+                        <FileText size={14} color="#4f46e5" />
+                        <span>Receipt</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -403,6 +423,16 @@ export const SuperAdminDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Invoice / Receipt Download Modal for Super Admin */}
+      <InvoiceReceiptModal
+        isOpen={receiptModalOpen}
+        onClose={() => {
+          setReceiptModalOpen(false);
+          setSelectedInvoiceSubId(null);
+        }}
+        subscriptionId={selectedInvoiceSubId}
+      />
     </div>
   );
 };

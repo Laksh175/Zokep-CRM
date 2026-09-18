@@ -330,3 +330,37 @@ export const getMySubscription = async (req, res) => {
   }
 };
 
+// @desc    Get Subscription Invoice / Receipt Details
+// @route   GET /api/subscriptions/invoice/:id
+// @access  Private (Admin or Super Admin)
+export const getSubscriptionInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = req.user;
+
+    const subscription = await Subscription.findById(id)
+      .populate('tenantId', 'name email companyName phone businessType')
+      .populate('planId');
+
+    if (!subscription) {
+      return res.status(404).json({ success: false, message: 'Invoice / Subscription record not found' });
+    }
+
+    // Check permission: Super Admin can view all; Admin can only view their own tenantId
+    if (user.role !== 'super_admin') {
+      const userTenantId = req.tenantId || user._id;
+      if (String(subscription.tenantId?._id || subscription.tenantId) !== String(userTenantId)) {
+        return res.status(403).json({ success: false, message: 'You do not have authorization to view this receipt' });
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: subscription,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+

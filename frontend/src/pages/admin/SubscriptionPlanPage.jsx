@@ -9,11 +9,15 @@ import {
   Clock,
   ShieldCheck,
   Check,
+  FileText,
+  Printer,
+  Download,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
 import RazorpayCheckoutModal from '../../components/RazorpayCheckoutModal';
+import InvoiceReceiptModal from '../../components/InvoiceReceiptModal';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -29,6 +33,10 @@ export const SubscriptionPlanPage = () => {
   // Razorpay Checkout Modal
   const [checkoutModalOpen, setCheckoutModalOpen] = useState(false);
   const [selectedPlanToBuy, setSelectedPlanToBuy] = useState(null);
+
+  // Invoice / Receipt Modal
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
 
   useEffect(() => {
     fetchSubscriptionAndPlans();
@@ -97,15 +105,31 @@ export const SubscriptionPlanPage = () => {
               </p>
             </div>
 
-            {current?.plan && (
-              <button
-                className="btn btn-primary btn-lg"
-                onClick={() => handleOpenCheckout(current.plan)}
-              >
-                <Zap size={18} />
-                {isExpired ? 'Renew Subscription Now' : 'Extend / Renew Plan'}
-              </button>
-            )}
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              {current?.id && (
+                <button
+                  className="btn btn-secondary btn-lg"
+                  onClick={() => {
+                    setSelectedInvoiceSubId(current.id);
+                    setReceiptModalOpen(true);
+                  }}
+                  title="View / Download Latest Tax Receipt"
+                >
+                  <FileText size={18} />
+                  <span>Download Receipt</span>
+                </button>
+              )}
+
+              {current?.plan && (
+                <button
+                  className="btn btn-primary btn-lg"
+                  onClick={() => handleOpenCheckout(current.plan)}
+                >
+                  <Zap size={18} />
+                  {isExpired ? 'Renew Subscription Now' : 'Extend / Renew Plan'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -189,6 +213,7 @@ export const SubscriptionPlanPage = () => {
                   <th>Payment Gateway</th>
                   <th>Period Covered</th>
                   <th>Date</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -212,6 +237,19 @@ export const SubscriptionPlanPage = () => {
                     <td style={{ color: 'var(--text-muted)', fontSize: '12px' }}>
                       {formatDate(hist.createdAt)}
                     </td>
+                    <td>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => {
+                          setSelectedInvoiceSubId(hist._id);
+                          setReceiptModalOpen(true);
+                        }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+                      >
+                        <FileText size={14} color="#4f46e5" />
+                        <span>Receipt</span>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -227,6 +265,16 @@ export const SubscriptionPlanPage = () => {
         plan={selectedPlanToBuy}
         billingCycle={selectedPlanToBuy?.billingCycle || 'monthly'}
         onPaymentSuccess={handlePaymentSuccess}
+      />
+
+      {/* Invoice / Receipt Download Modal */}
+      <InvoiceReceiptModal
+        isOpen={receiptModalOpen}
+        onClose={() => {
+          setReceiptModalOpen(false);
+          setSelectedInvoiceSubId(null);
+        }}
+        subscriptionId={selectedInvoiceSubId}
       />
     </div>
   );

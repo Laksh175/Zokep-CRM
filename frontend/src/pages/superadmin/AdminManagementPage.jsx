@@ -10,11 +10,13 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
+  Receipt,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Badge from '../../components/Badge';
 import Modal from '../../components/Modal';
 import CustomSelect from '../../components/CustomSelect';
+import InvoiceReceiptModal from '../../components/InvoiceReceiptModal';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
@@ -39,6 +41,9 @@ export const AdminManagementPage = () => {
   const [extendModalOpen, setExtendModalOpen] = useState(false);
   const [extendDays, setExtendDays] = useState(30);
   const [extending, setExtending] = useState(false);
+
+  // Tax Invoice Receipt State
+  const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
 
   useEffect(() => {
     fetchAdmins();
@@ -245,6 +250,16 @@ export const AdminManagementPage = () => {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: '6px' }}>
+                            {admin.subscription?.id && (
+                              <button
+                                onClick={() => setSelectedInvoiceSubId(admin.subscription.id)}
+                                className="btn btn-secondary btn-sm"
+                                title="Download Tax Receipt"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                              >
+                                <Receipt size={14} />
+                              </button>
+                            )}
                             <button
                               onClick={() => openToggleStatusModal(admin)}
                               className={`btn btn-sm ${admin.isActive ? 'btn-danger' : 'btn-success'}`}
@@ -345,6 +360,13 @@ export const AdminManagementPage = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Tax Invoice Receipt Viewer Modal */}
+      <InvoiceReceiptModal
+        isOpen={!!selectedInvoiceSubId}
+        subscriptionId={selectedInvoiceSubId}
+        onClose={() => setSelectedInvoiceSubId(null)}
+      />
     </div>
   );
 };
