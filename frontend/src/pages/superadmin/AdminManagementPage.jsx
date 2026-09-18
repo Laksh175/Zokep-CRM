@@ -44,6 +44,7 @@ export const AdminManagementPage = () => {
 
   // Tax Invoice Receipt State
   const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
+  const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
 
   useEffect(() => {
     fetchAdmins();
@@ -252,7 +253,19 @@ export const AdminManagementPage = () => {
                           <div style={{ display: 'flex', gap: '6px' }}>
                             {admin.subscription?.id && (
                               <button
-                                onClick={() => setSelectedInvoiceSubId(admin.subscription.id)}
+                                onClick={() => {
+                                  setSelectedInvoiceSubId(admin.subscription.id);
+                                  setSelectedInvoiceData({
+                                    ...admin.subscription,
+                                    _id: admin.subscription.id,
+                                    tenantId: admin,
+                                    amountPaid: admin.subscription.price,
+                                    planId: {
+                                      name: admin.subscription.planName,
+                                      billingCycle: admin.subscription.billingCycle,
+                                    },
+                                  });
+                                }}
                                 className="btn btn-secondary btn-sm"
                                 title="Download Tax Receipt"
                                 style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}
@@ -337,7 +350,11 @@ export const AdminManagementPage = () => {
             <button className="btn btn-secondary" onClick={() => setExtendModalOpen(false)} disabled={extending}>
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={handleConfirmExtend} disabled={extending}>
+            <button
+              className="btn btn-primary"
+              onClick={handleConfirmExtend}
+              disabled={extending}
+            >
               {extending ? 'Extending...' : `Grant ${extendDays} Days Extension`}
             </button>
           </>
@@ -365,7 +382,11 @@ export const AdminManagementPage = () => {
       <InvoiceReceiptModal
         isOpen={!!selectedInvoiceSubId}
         subscriptionId={selectedInvoiceSubId}
-        onClose={() => setSelectedInvoiceSubId(null)}
+        initialData={selectedInvoiceData}
+        onClose={() => {
+          setSelectedInvoiceSubId(null);
+          setSelectedInvoiceData(null);
+        }}
       />
     </div>
   );

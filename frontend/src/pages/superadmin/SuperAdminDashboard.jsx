@@ -74,6 +74,7 @@ export const SuperAdminDashboard = () => {
   // Invoice / Receipt Modal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
+  const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
 
   useEffect(() => {
     // 0ms Instant Cache Hydration for instant LCP paint
@@ -408,6 +409,7 @@ export const SuperAdminDashboard = () => {
                         className="btn btn-secondary btn-sm"
                         onClick={() => {
                           setSelectedInvoiceSubId(sub._id);
+                          setSelectedInvoiceData(sub);
                           setReceiptModalOpen(true);
                         }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
@@ -430,8 +432,10 @@ export const SuperAdminDashboard = () => {
         onClose={() => {
           setReceiptModalOpen(false);
           setSelectedInvoiceSubId(null);
+          setSelectedInvoiceData(null);
         }}
         subscriptionId={selectedInvoiceSubId}
+        initialData={selectedInvoiceData}
       />
     </div>
   );

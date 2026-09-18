@@ -24,7 +24,7 @@ import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
 
 export const SubscriptionPlanPage = () => {
-  const { refreshMe } = useAuth();
+  const { user, refreshMe } = useAuth();
   const { error } = useToast();
   const [subData, setSubData] = useState(null);
   const [plans, setPlans] = useState([]);
@@ -37,6 +37,7 @@ export const SubscriptionPlanPage = () => {
   // Invoice / Receipt Modal
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
   const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
+  const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
 
   useEffect(() => {
     fetchSubscriptionAndPlans();
@@ -69,6 +70,7 @@ export const SubscriptionPlanPage = () => {
   };
 
   const current = subData?.current;
+  const history = subData?.history;
   const isExpired = current?.isExpired ?? false;
 
   return (
@@ -111,6 +113,12 @@ export const SubscriptionPlanPage = () => {
                   className="btn btn-secondary btn-lg"
                   onClick={() => {
                     setSelectedInvoiceSubId(current.id);
+                    setSelectedInvoiceData({
+                      ...current,
+                      _id: current.id,
+                      tenantId: user,
+                      planId: current.plan,
+                    });
                     setReceiptModalOpen(true);
                   }}
                   title="View / Download Latest Tax Receipt"
@@ -139,57 +147,81 @@ export const SubscriptionPlanPage = () => {
             Available Plans & Upgrades
           </h3>
           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-            Upgrade anytime with secure Razorpay payment.
+            Choose a plan that scales with your sales velocity and team requirements.
           </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(270px, 1fr))', gap: '20px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '20px',
+            }}
+          >
             {plans.map((plan) => {
-              const isCurrentPlan = current?.plan?._id === plan._id;
-
+              const isCurrent = current?.plan?._id === plan._id || current?.plan?.name === plan.name;
               return (
                 <div
                   key={plan._id}
                   className="glass-panel"
                   style={{
                     padding: '24px',
-                    borderRadius: '16px',
                     display: 'flex',
                     flexDirection: 'column',
-                    border: isCurrentPlan ? '2px solid #10b981' : '1px solid var(--border-subtle)',
+                    justifyContent: 'space-between',
+                    border: isCurrent ? '2px solid var(--primary-500)' : '1px solid var(--border-color)',
+                    position: 'relative',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                    <div>
-                      <h4 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>{plan.name}</h4>
-                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        {plan.durationMonths || (plan.billingCycle === 'yearly' ? 12 : 1)} { (plan.durationMonths || (plan.billingCycle === 'yearly' ? 12 : 1)) === 1 ? 'Month' : 'Months' } Duration
+                  {isCurrent && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                      }}
+                    >
+                      <Badge color="#10b981">Your Plan</Badge>
+                    </div>
+                  )}
+
+                  <div>
+                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px' }}>{plan.name}</h4>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
+                      <span style={{ fontSize: '28px', fontWeight: 900 }}>₹{plan.price}</span>
+                      <span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                        /{plan.billingCycle || 'month'}
                       </span>
                     </div>
-                    {isCurrentPlan && <Badge color="#10b981">Current</Badge>}
-                  </div>
 
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', margin: '14px 0' }}>
-                    <span style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)' }}>₹{plan.price}</span>
-                    <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                      / {plan.durationMonths || (plan.billingCycle === 'yearly' ? 12 : 1)} { (plan.durationMonths || (plan.billingCycle === 'yearly' ? 12 : 1)) === 1 ? 'mo' : 'mos' }
-                    </span>
-                  </div>
-
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '20px' }}>
-                    {plan.features?.map((f, idx) => (
-                      <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        <Check size={14} color="#10b981" />
-                        <span>{f}</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                        <Check size={16} color="#10b981" />
+                        <span>
+                          {plan.staffLimit === -1 ? 'Unlimited' : plan.staffLimit} Team Staff Accounts
+                        </span>
                       </div>
-                    ))}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                        <Check size={16} color="#10b981" />
+                        <span>
+                          {plan.leadLimit === -1 ? 'Unlimited' : plan.leadLimit} Ingested Leads
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                        <Check size={16} color="#10b981" />
+                        <span>Direct WhatsApp & Meta Ads Ingestion</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
+                        <Check size={16} color="#10b981" />
+                        <span>Custom SMTP Email Dispatcher</span>
+                      </div>
+                    </div>
                   </div>
 
                   <button
-                    className={`btn ${isCurrentPlan ? 'btn-success' : 'btn-primary'}`}
+                    className={`btn ${isCurrent ? 'btn-secondary' : 'btn-primary'} btn-block`}
                     onClick={() => handleOpenCheckout(plan)}
                   >
-                    <CreditCard size={16} />
-                    {isCurrentPlan ? 'Renew This Plan' : `Upgrade to ${plan.name}`}
+                    {isCurrent ? 'Extend / Renew' : 'Upgrade Plan'}
                   </button>
                 </div>
               );
@@ -197,36 +229,46 @@ export const SubscriptionPlanPage = () => {
           </div>
         </div>
 
-        {/* Invoice & Payment History */}
+        {/* Subscription & Billing Ledger History */}
         <div className="glass-panel" style={{ padding: '24px' }}>
-          <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>
-            Payment History & Invoices
+          <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '16px' }}>
+            Subscription & Payment History
           </h3>
 
           <div className="table-container">
             <table className="crm-table">
               <thead>
                 <tr>
-                  <th>Invoice Ref</th>
-                  <th>Plan Name</th>
-                  <th>Amount Paid</th>
-                  <th>Payment Gateway</th>
-                  <th>Period Covered</th>
+                  <th>Plan</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Payment Type</th>
+                  <th>Coverage Period</th>
                   <th>Date</th>
-                  <th>Action</th>
+                  <th>Invoice Receipt</th>
                 </tr>
               </thead>
               <tbody>
-                {subData?.history?.map((hist) => (
+                {(!history || history.length === 0) && (
+                  <tr>
+                    <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                      No past billing transactions found.
+                    </td>
+                  </tr>
+                )}
+                {history?.map((hist) => (
                   <tr key={hist._id}>
                     <td>
-                      <code>{hist.invoiceNumber || `INV-${hist._id.slice(-6)}`}</code>
+                      <strong>{hist.planId?.name || 'CRM Plan'}</strong>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {hist.planId?.billingCycle || 'Monthly'}
+                      </div>
                     </td>
+                    <td style={{ fontWeight: 600 }}>₹{hist.amountPaid}</td>
                     <td>
-                      <strong>{hist.planId?.name || 'Standard'}</strong>
-                    </td>
-                    <td style={{ fontWeight: 700, color: '#10b981' }}>
-                      ₹{hist.amountPaid}
+                      <Badge color={hist.status === 'active' ? '#10b981' : '#64748b'}>
+                        {hist.status}
+                      </Badge>
                     </td>
                     <td>
                       <Badge color="#6366f1">Razorpay Verified</Badge>
@@ -242,6 +284,10 @@ export const SubscriptionPlanPage = () => {
                         className="btn btn-secondary btn-sm"
                         onClick={() => {
                           setSelectedInvoiceSubId(hist._id);
+                          setSelectedInvoiceData({
+                            ...hist,
+                            tenantId: user,
+                          });
                           setReceiptModalOpen(true);
                         }}
                         style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
@@ -273,8 +319,10 @@ export const SubscriptionPlanPage = () => {
         onClose={() => {
           setReceiptModalOpen(false);
           setSelectedInvoiceSubId(null);
+          setSelectedInvoiceData(null);
         }}
         subscriptionId={selectedInvoiceSubId}
+        initialData={selectedInvoiceData}
       />
     </div>
   );
