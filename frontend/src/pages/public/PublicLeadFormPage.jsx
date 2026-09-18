@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { Layers, Send, CheckCircle2, AlertCircle, Building2, Sparkles } from 'lucide-react';
 import api from '../../services/api';
 import DynamicFieldRenderer from '../../components/DynamicFieldRenderer';
+import { PUBLIC_LEAD_SOURCE_OPTIONS } from '../../utils/leadSources';
 import confetti from 'canvas-confetti';
 
 export const PublicLeadFormPage = () => {
   const { tenantId } = useParams();
+  const [searchParams] = useSearchParams();
+  const urlSource = searchParams.get('source') || searchParams.get('utm_source') || '';
 
   const [formConfig, setFormConfig] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,6 +23,7 @@ export const PublicLeadFormPage = () => {
     phone: '',
     email: '',
     company: '',
+    source: urlSource || '',
     notes: '',
   });
 
@@ -213,6 +217,22 @@ export const PublicLeadFormPage = () => {
                   value={formData.company}
                   onChange={handleInputChange}
                 />
+              </div>
+
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">How did you hear about us? (Optional)</label>
+                <select
+                  name="source"
+                  className="form-select"
+                  value={formData.source}
+                  onChange={handleInputChange}
+                >
+                  {PUBLIC_LEAD_SOURCE_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Dynamic Custom Fields configured by Tenant Admin */}

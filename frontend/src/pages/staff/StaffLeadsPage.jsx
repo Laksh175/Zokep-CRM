@@ -22,6 +22,8 @@ import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
 import WhatsAppIcon from '../../components/WhatsAppIcon';
 import CustomSelect from '../../components/CustomSelect';
+import LeadSourceBadge from '../../components/LeadSourceBadge';
+import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_FILTER_OPTIONS } from '../../utils/leadSources';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatTime, formatDateTime, toDateTimeLocalInput, isToday, isOverdue } from '../../utils/date';
@@ -44,6 +46,7 @@ export const StaffLeadsPage = () => {
   // Filters
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
 
   // Add Lead Modal (Auto-assigned to self)
@@ -55,6 +58,7 @@ export const StaffLeadsPage = () => {
     email: '',
     company: '',
     dealValue: 0,
+    source: 'whatsapp',
     notes: '',
     priority: 'medium',
     statusId: '',
@@ -83,7 +87,7 @@ export const StaffLeadsPage = () => {
   useEffect(() => {
     setPage(1);
     fetchMyLeads(1, limit);
-  }, [statusFilter, priorityFilter]);
+  }, [statusFilter, sourceFilter, priorityFilter]);
 
   const fetchMetadata = async () => {
     try {
@@ -104,6 +108,7 @@ export const StaffLeadsPage = () => {
       const res = await api.get('/leads', {
         search,
         statusId: statusFilter,
+        source: sourceFilter,
         priority: priorityFilter,
         page: pageToFetch,
         limit: limitToFetch,
@@ -144,6 +149,7 @@ export const StaffLeadsPage = () => {
       email: '',
       company: '',
       dealValue: 0,
+      source: 'whatsapp',
       notes: '',
       priority: 'medium',
       statusId: statuses[0]?._id || '',
@@ -316,7 +322,7 @@ export const StaffLeadsPage = () => {
             </button>
           </form>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             <CustomSelect
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -330,6 +336,14 @@ export const StaffLeadsPage = () => {
                   color: st.color,
                 })),
               ]}
+            />
+
+            <CustomSelect
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              placeholder="All Lead Sources"
+              style={{ width: '160px' }}
+              options={LEAD_SOURCE_FILTER_OPTIONS}
             />
 
             <CustomSelect
@@ -373,6 +387,7 @@ export const StaffLeadsPage = () => {
                       <th>Company</th>
                       <th>Deal Value</th>
                       <th>Status</th>
+                      <th>Lead Source</th>
                       <th>Next Follow-up</th>
                       <th>1-Click Actions</th>
                     </tr>
@@ -410,6 +425,9 @@ export const StaffLeadsPage = () => {
                               color: st.color,
                             }))}
                           />
+                        </td>
+                        <td>
+                          <LeadSourceBadge source={lead.source} />
                         </td>
                         <td>
                           {lead.nextFollowupDate ? (
@@ -646,6 +664,14 @@ export const StaffLeadsPage = () => {
 
           <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Lead Acquisition Source *</label>
+              <CustomSelect
+                value={leadForm.source}
+                onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
+                options={LEAD_SOURCE_OPTIONS}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Deal Value (₹)</label>
               <input
                 type="number"
@@ -655,18 +681,19 @@ export const StaffLeadsPage = () => {
                 onChange={(e) => setLeadForm({ ...leadForm, dealValue: Number(e.target.value) })}
               />
             </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Initial Pipeline Stage</label>
-              <CustomSelect
-                value={leadForm.statusId}
-                onChange={(e) => setLeadForm({ ...leadForm, statusId: e.target.value })}
-                options={statuses.map((st) => ({
-                  value: st._id,
-                  label: st.name,
-                  color: st.color,
-                }))}
-              />
-            </div>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">Initial Pipeline Stage</label>
+            <CustomSelect
+              value={leadForm.statusId}
+              onChange={(e) => setLeadForm({ ...leadForm, statusId: e.target.value })}
+              options={statuses.map((st) => ({
+                value: st._id,
+                label: st.name,
+                color: st.color,
+              }))}
+            />
           </div>
 
           <div className="form-group" style={{ margin: 0 }}>
@@ -718,7 +745,10 @@ export const StaffLeadsPage = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ background: 'var(--bg-surface-elevated)', padding: '16px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <strong style={{ fontSize: '17px' }}>{activeLead.name}</strong>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <strong style={{ fontSize: '17px' }}>{activeLead.name}</strong>
+                  <LeadSourceBadge source={activeLead.source} />
+                </div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <Phone size={13} color="var(--primary-500)" />

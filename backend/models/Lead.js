@@ -37,8 +37,9 @@ const leadSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ['manual', 'public_form', 'csv_import', 'staff_added', 'website', 'referral', 'social_media', 'other'],
       default: 'manual',
+      trim: true,
+      index: true,
     },
     notes: {
       type: String,

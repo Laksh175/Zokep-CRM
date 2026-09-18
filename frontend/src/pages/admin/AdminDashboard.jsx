@@ -31,6 +31,7 @@ import Badge from '../../components/Badge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
+import { getLeadSourceLabel } from '../../utils/leadSources';
 import { Link } from 'react-router-dom';
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -262,7 +263,7 @@ export const AdminDashboard = () => {
                     tick={{ fontSize: 11, fill: '#64748b' }}
                     axisLine={{ stroke: '#cbd5e1' }}
                     tickLine={false}
-                    tickFormatter={(val) => val.charAt(0).toUpperCase() + val.slice(1)}
+                    tickFormatter={(val) => getLeadSourceLabel(val, true)}
                   />
                   <YAxis
                     allowDecimals={false}
@@ -272,6 +273,7 @@ export const AdminDashboard = () => {
                   />
                   <Tooltip
                     cursor={{ fill: 'rgba(0, 56, 101, 0.04)' }}
+                    labelFormatter={(label) => getLeadSourceLabel(label)}
                     formatter={(val) => [`${val} Leads`, 'Total Leads']}
                     contentStyle={{
                       background: '#ffffff',

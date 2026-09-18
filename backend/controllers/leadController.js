@@ -211,7 +211,7 @@ export const createLead = async (req, res) => {
       email: email || '',
       company: company || '',
       dealValue: Number(dealValue) || 0,
-      source: req.user.role === 'staff' ? 'staff_added' : source || 'manual',
+      source: source || (req.user.role === 'staff' ? 'staff_added' : 'manual'),
       notes: notes || '',
       priority: priority || 'medium',
       tags: Array.isArray(tags) ? tags : tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [],
@@ -623,6 +623,9 @@ export const bulkUploadLeads = async (req, res) => {
               if (cfVal) customData[cf.fieldName] = cfVal;
             }
 
+            const sourceFromCsv = getVal(['source', 'lead source', 'lead_source', 'channel', 'lead origin']);
+            const source = sourceFromCsv || 'csv_import';
+
             const lead = await Lead.create({
               tenantId,
               name: name.trim(),
@@ -630,7 +633,7 @@ export const bulkUploadLeads = async (req, res) => {
               email: email ? String(email).trim().toLowerCase() : '',
               company: company ? String(company).trim() : '',
               dealValue: Number(dealValue) || 0,
-              source: 'csv_import',
+              source,
               notes: notes ? String(notes).trim() : '',
               statusId: defaultStatus?._id || null,
               customFieldsData: customData,

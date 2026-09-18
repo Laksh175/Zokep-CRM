@@ -37,6 +37,8 @@ import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
 import WhatsAppIcon from '../../components/WhatsAppIcon';
 import CustomSelect from '../../components/CustomSelect';
+import LeadSourceBadge from '../../components/LeadSourceBadge';
+import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_FILTER_OPTIONS } from '../../utils/leadSources';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatDateTime, formatTime, toDateTimeLocalInput } from '../../utils/date';
@@ -516,6 +518,15 @@ export const LeadManagementPage = () => {
               ]}
             />
 
+            {/* Lead Source Filter */}
+            <CustomSelect
+              value={sourceFilter}
+              onChange={(e) => setSourceFilter(e.target.value)}
+              placeholder="All Lead Sources"
+              style={{ width: '160px' }}
+              options={LEAD_SOURCE_FILTER_OPTIONS}
+            />
+
             {/* Priority Filter */}
             <CustomSelect
               value={priorityFilter}
@@ -578,6 +589,7 @@ export const LeadManagementPage = () => {
                       <th>Company</th>
                       <th>Deal Value</th>
                       <th>Pipeline Status</th>
+                      <th>Lead Source</th>
                       <th>Assigned To</th>
                       <th>Next Follow-up</th>
                       <th>1-Click Actions</th>
@@ -632,6 +644,9 @@ export const LeadManagementPage = () => {
                             />
                             {lead.statusId?.name || 'New Lead'}
                           </span>
+                        </td>
+                        <td>
+                          <LeadSourceBadge source={lead.source} />
                         </td>
                         <td>
                           <CustomSelect
@@ -875,6 +890,7 @@ export const LeadManagementPage = () => {
                           >
                             {status.name}
                           </span>
+                          <LeadSourceBadge source={lead.source} short={true} />
                           <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: '140px' }}>
                             <CustomSelect
                               value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
@@ -975,6 +991,14 @@ export const LeadManagementPage = () => {
 
           <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Lead Acquisition Source <span style={{ color: '#f43f5e' }}>*</span></label>
+              <CustomSelect
+                value={leadForm.source}
+                onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
+                options={LEAD_SOURCE_OPTIONS}
+              />
+            </div>
+            <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Potential Deal Value (₹)</label>
               <input
                 type="number"
@@ -984,6 +1008,9 @@ export const LeadManagementPage = () => {
                 onChange={(e) => setLeadForm({ ...leadForm, dealValue: Number(e.target.value) })}
               />
             </div>
+          </div>
+
+          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Lead Priority</label>
               <CustomSelect
@@ -997,9 +1024,6 @@ export const LeadManagementPage = () => {
                 ]}
               />
             </div>
-          </div>
-
-          <div className="form-grid-2">
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Assign to Staff Member</label>
               <CustomSelect
@@ -1015,21 +1039,22 @@ export const LeadManagementPage = () => {
                 ]}
               />
             </div>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">
-                Pipeline Stage / Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
-              </label>
-              <CustomSelect
-                value={leadForm.statusId}
-                disabled={true}
-                title="Pipeline status can only be updated by Sales Staff"
-                options={statuses.map((st) => ({
-                  value: st._id,
-                  label: st.name,
-                  color: st.color,
-                }))}
-              />
-            </div>
+          </div>
+
+          <div className="form-group" style={{ margin: 0 }}>
+            <label className="form-label">
+              Pipeline Stage / Status <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>(Sales Staff Only)</span>
+            </label>
+            <CustomSelect
+              value={leadForm.statusId}
+              disabled={true}
+              title="Pipeline status can only be updated by Sales Staff"
+              options={statuses.map((st) => ({
+                value: st._id,
+                label: st.name,
+                color: st.color,
+              }))}
+            />
           </div>
 
           {/* Dynamic Extra Custom Fields defined by Admin */}
@@ -1104,11 +1129,12 @@ export const LeadManagementPage = () => {
             {/* Quick Action Banner */}
             <div style={{ background: 'var(--bg-surface-elevated)', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0 }}>{activeLead.name}</h3>
                   <Badge color={activeLead.statusId?.color || '#3b82f6'}>
                     {activeLead.statusId?.name || 'New'}
                   </Badge>
+                  <LeadSourceBadge source={activeLead.source} />
                   {activeLead.isConverted && (
                     <Badge color="#10b981">Won Customer 🎉</Badge>
                   )}

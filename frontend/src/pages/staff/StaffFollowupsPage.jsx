@@ -22,6 +22,7 @@ import CustomSelect from '../../components/CustomSelect';
 import WhatsAppModal from '../../components/WhatsAppModal';
 import EmailModal from '../../components/EmailModal';
 import WhatsAppIcon from '../../components/WhatsAppIcon';
+import LeadSourceBadge from '../../components/LeadSourceBadge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate, formatTime, formatDateTime, toDateTimeLocalInput, isToday, isOverdue } from '../../utils/date';
@@ -331,6 +332,7 @@ export const StaffFollowupsPage = () => {
                       <th>Lead Contact</th>
                       <th>Company</th>
                       <th>Deal Value</th>
+                      <th>Lead Source</th>
                       <th>Scheduled Follow-up Time</th>
                       <th>Pipeline Status</th>
                       <th>1-Click Actions</th>
@@ -353,6 +355,9 @@ export const StaffFollowupsPage = () => {
                           <td>{lead.company || '-'}</td>
                           <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
                             ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td>
+                            <LeadSourceBadge source={lead.source} />
                           </td>
                           <td>
                             {lead.nextFollowupDate ? (

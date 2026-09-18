@@ -3,6 +3,7 @@ import { UserCheck, DollarSign, Calendar, Mail, Phone, Building2, Search, ArrowU
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
+import LeadSourceBadge from '../../components/LeadSourceBadge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
@@ -93,6 +94,7 @@ export const CustomerListPage = () => {
                     <th>Customer Contact</th>
                     <th>Company</th>
                     <th>Closed Deal Value</th>
+                    <th>Acquisition Source</th>
                     <th>Closing Consultant</th>
                     <th>Conversion Date</th>
                   </tr>
@@ -109,6 +111,9 @@ export const CustomerListPage = () => {
                       <td>{c.company || '-'}</td>
                       <td style={{ fontWeight: 800, color: '#10b981', fontSize: '15px' }}>
                         ₹{(c.convertedDealAmount || c.dealValue || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <LeadSourceBadge source={c.source} />
                       </td>
                       <td>
                         {c.assignedTo?.name || 'Admin'}

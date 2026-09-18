@@ -14,11 +14,23 @@ import {
   Sparkles,
   Check,
   Loader2,
+  Zap,
+  Megaphone,
+  Radio,
+  Share2,
+  Send,
+  Smartphone,
+  ShieldCheck,
+  Play,
+  HelpCircle,
+  QrCode,
+  Key,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
 import Badge from '../../components/Badge';
 import CustomSelect from '../../components/CustomSelect';
+import WhatsAppIcon from '../../components/WhatsAppIcon';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -26,7 +38,7 @@ import { useToast } from '../../context/ToastContext';
 export const SettingsPage = () => {
   const { user } = useAuth();
   const { success, error } = useToast();
-  const [activeTab, setActiveTab] = useState('statuses'); // 'statuses' | 'fields' | 'templates' | 'public_form'
+  const [activeTab, setActiveTab] = useState('statuses'); // 'statuses' | 'fields' | 'templates' | 'public_form' | 'integrations'
 
   // Data states
   const [statuses, setStatuses] = useState([]);
@@ -67,6 +79,18 @@ export const SettingsPage = () => {
   // Public form copy states
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
+
+  // Integrations states
+  const [copiedMetaUrl, setCopiedMetaUrl] = useState(false);
+  const [copiedMetaToken, setCopiedMetaToken] = useState(false);
+  const [copiedWaUrl, setCopiedWaUrl] = useState(false);
+  const [copiedWaToken, setCopiedWaToken] = useState(false);
+  const [copiedUniversalUrl, setCopiedUniversalUrl] = useState(false);
+  const [copiedWaLink, setCopiedWaLink] = useState(false);
+  const [testingMeta, setTestingMeta] = useState(false);
+  const [testingWa, setTestingWa] = useState(false);
+  const [waCustomPhone, setWaCustomPhone] = useState(user?.phone || '919876543210');
+  const [waCustomMessage, setWaCustomMessage] = useState('Hi! I saw your campaign and would like to know more details.');
 
   useEffect(() => {
     fetchAllSettings();
@@ -276,8 +300,18 @@ export const SettingsPage = () => {
     }
   };
 
-  const publicFormUrl = `${window.location.origin}/f/${user?.tenantId || user?.id}`;
+  const tenantId = user?.tenantId || user?.id || user?._id;
+  const backendBaseUrl = window.location.origin;
+  const publicFormUrl = `${backendBaseUrl}/f/${tenantId}`;
   const embedCode = `<iframe src="${publicFormUrl}" width="100%" height="650" frameborder="0" style="border-radius: 12px; border: 1px solid #e2e8f0;"></iframe>`;
+
+  const metaWebhookUrl = `${backendBaseUrl}/api/public/webhook/meta/${tenantId}`;
+  const metaVerifyToken = `zokep_meta_${tenantId}`;
+  const waWebhookUrl = `${backendBaseUrl}/api/public/webhook/whatsapp/${tenantId}`;
+  const waVerifyToken = `zokep_wa_${tenantId}`;
+  const universalWebhookUrl = `${backendBaseUrl}/api/public/webhook/lead/${tenantId}`;
+
+  const generatedWaLink = `https://wa.me/${waCustomPhone.replace(/\D/g, '')}?text=${encodeURIComponent(waCustomMessage)}`;
 
   const copyToClipboard = (text, type) => {
     navigator.clipboard.writeText(text);
@@ -285,10 +319,75 @@ export const SettingsPage = () => {
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2500);
       success('Public form link copied to clipboard!');
-    } else {
+    } else if (type === 'embed') {
       setCopiedEmbed(true);
       setTimeout(() => setCopiedEmbed(false), 2500);
       success('HTML Embed code copied to clipboard!');
+    } else if (type === 'meta_url') {
+      setCopiedMetaUrl(true);
+      setTimeout(() => setCopiedMetaUrl(false), 2500);
+      success('Meta Webhook URL copied!');
+    } else if (type === 'meta_token') {
+      setCopiedMetaToken(true);
+      setTimeout(() => setCopiedMetaToken(false), 2500);
+      success('Meta Verify Token copied!');
+    } else if (type === 'wa_url') {
+      setCopiedWaUrl(true);
+      setTimeout(() => setCopiedWaUrl(false), 2500);
+      success('WhatsApp Webhook URL copied!');
+    } else if (type === 'wa_token') {
+      setCopiedWaToken(true);
+      setTimeout(() => setCopiedWaToken(false), 2500);
+      success('WhatsApp Verify Token copied!');
+    } else if (type === 'universal_url') {
+      setCopiedUniversalUrl(true);
+      setTimeout(() => setCopiedUniversalUrl(false), 2500);
+      success('Universal Webhook URL copied!');
+    } else if (type === 'wa_link') {
+      setCopiedWaLink(true);
+      setTimeout(() => setCopiedWaLink(false), 2500);
+      success('Click-to-WhatsApp link copied!');
+    }
+  };
+
+  const handleTestMetaLead = async () => {
+    try {
+      setTestingMeta(true);
+      const res = await api.post(`/public/webhook/meta/${tenantId}`, {
+        full_name: 'Simulated Meta Ad Lead',
+        phone_number: `+91 ${Math.floor(9000000000 + Math.random() * 999999999)}`,
+        email: 'meta.prospect@example.com',
+        company: 'Apex Design & Infra',
+        campaign_name: 'Meta Ads Summer Promo 2026',
+        ad_name: 'Luxury 3BHK Lead Form Ad',
+        notes: 'Submitted instant inquiry form via Instagram sponsored post.',
+        dealValue: 35000,
+      });
+      if (res.success) {
+        success('🎉 Test Meta Lead Ingested! Check your Leads page.');
+      }
+    } catch (err) {
+      error(err.message || 'Failed to simulate Meta lead');
+    } finally {
+      setTestingMeta(false);
+    }
+  };
+
+  const handleTestWaLead = async () => {
+    try {
+      setTestingWa(true);
+      const res = await api.post(`/public/webhook/whatsapp/${tenantId}`, {
+        senderName: 'WhatsApp Prospect (Demo)',
+        sender: `+91 ${Math.floor(9000000000 + Math.random() * 999999999)}`,
+        message: 'Hi! I saw your WhatsApp advertisement and would like to schedule a consultation call today.',
+      });
+      if (res.success) {
+        success('💬 Test WhatsApp Lead Ingested! Check your Leads page.');
+      }
+    } catch (err) {
+      error(err.message || 'Failed to simulate WhatsApp lead');
+    } finally {
+      setTestingWa(false);
     }
   };
 
@@ -296,7 +395,7 @@ export const SettingsPage = () => {
     <div>
       <Header
         title="CRM Customization & Settings"
-        subtitle="Configure custom lead stages & colors, dynamic form fields, WhatsApp/Email templates, and public capture forms."
+        subtitle="Configure custom lead stages & colors, dynamic form fields, WhatsApp/Email templates, direct webhooks, and public capture forms."
       />
 
       <div className="page-wrapper">
@@ -329,6 +428,13 @@ export const SettingsPage = () => {
           >
             <LinkIcon size={16} style={{ display: 'inline', marginRight: 6 }} />
             Public Lead Form Link
+          </button>
+          <button
+            className={`tab-btn ${activeTab === 'integrations' ? 'active' : ''}`}
+            onClick={() => setActiveTab('integrations')}
+          >
+            <Zap size={16} style={{ display: 'inline', marginRight: 6, color: '#f59e0b' }} />
+            Meta & WhatsApp Webhooks
           </button>
         </div>
 
@@ -618,6 +724,283 @@ export const SettingsPage = () => {
                     {copiedEmbed ? <Check size={18} /> : <Copy size={18} />}
                     <span>{copiedEmbed ? 'Copied!' : 'Copy Embed'}</span>
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 5: META ADS & WHATSAPP DIRECT WEBHOOKS */}
+        {activeTab === 'integrations' && (
+          <div className="glass-panel" style={{ padding: '28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Zap size={20} color="#f59e0b" />
+                  Direct Lead Ingestion & Automated Webhooks
+                </h3>
+                <p style={{ fontSize: '14px', color: 'var(--text-secondary)', margin: '4px 0 0' }}>
+                  Capture leads straight into Zokep CRM in real-time from Meta (Facebook & Instagram) Lead Ads, WhatsApp Business, and custom API webhooks.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {/* INTEGRATION 1: META ADS (FACEBOOK & INSTAGRAM) */}
+              <div style={{ background: 'var(--bg-surface-elevated)', padding: '24px', borderRadius: '14px', border: '1px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(24, 119, 242, 0.12)', border: '1px solid rgba(24, 119, 242, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1877f2' }}>
+                      <Megaphone size={20} />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '16px' }}>Meta (Facebook & Instagram) Instant Lead Ads</strong>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Auto-push leads when users submit forms on Facebook or Instagram</div>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleTestMetaLead}
+                    disabled={testingMeta}
+                    style={{ borderColor: 'rgba(24, 119, 242, 0.4)', color: '#1877f2' }}
+                  >
+                    {testingMeta ? <Loader2 size={14} className="spin-icon" /> : <Play size={14} />}
+                    <span>{testingMeta ? 'Simulating...' : '🧪 Send Test Meta Lead'}</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                  {/* Webhook URL */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px' }}>Meta Webhook Callback URL</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        className="form-input"
+                        value={metaWebhookUrl}
+                        style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface)' }}
+                      />
+                      <button
+                        className={`btn ${copiedMetaUrl ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                        onClick={() => copyToClipboard(metaWebhookUrl, 'meta_url')}
+                      >
+                        {copiedMetaUrl ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Verify Token */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px' }}>Meta Webhook Verify Token</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        className="form-input"
+                        value={metaVerifyToken}
+                        style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface)' }}
+                      />
+                      <button
+                        className={`btn ${copiedMetaToken ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                        onClick={() => copyToClipboard(metaVerifyToken, 'meta_token')}
+                      >
+                        {copiedMetaToken ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Meta Integration Instructions */}
+                <div style={{ background: 'var(--bg-surface)', padding: '14px 18px', borderRadius: '10px', fontSize: '13px', color: 'var(--text-secondary)', border: '1px solid var(--border-subtle)' }}>
+                  <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                    📖 How to connect Facebook & Instagram Lead Ads:
+                  </strong>
+                  <ol style={{ margin: 0, paddingLeft: '18px', lineHeight: 1.6 }}>
+                    <li>Open <strong>Meta App Dashboard</strong> or <strong>Meta Events Manager / Leads Center</strong>.</li>
+                    <li>Add the <strong>Webhooks</strong> product and subscribe to the <code>leadgen</code> object.</li>
+                    <li>Paste the <strong>Callback URL</strong> and <strong>Verify Token</strong> shown above.</li>
+                    <li><em>Or connect in 60 seconds via Zapier / Make.com</em>: Use our Universal Webhook endpoint below to route leads from Facebook Lead Ads with 0 code.</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* INTEGRATION 2: WHATSAPP BUSINESS & DIRECT INBOUND CHAT */}
+              <div style={{ background: 'var(--bg-surface-elevated)', padding: '24px', borderRadius: '14px', border: '1px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(37, 211, 102, 0.12)', border: '1px solid rgba(37, 211, 102, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#25d366' }}>
+                      <WhatsAppIcon size={20} color="#25d366" />
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '16px' }}>WhatsApp Business Direct Ingestion & Chat Link</strong>
+                      <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Auto-create leads when prospects send WhatsApp messages or click your direct WhatsApp link</div>
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleTestWaLead}
+                    disabled={testingWa}
+                    style={{ borderColor: 'rgba(37, 211, 102, 0.4)', color: '#25d366' }}
+                  >
+                    {testingWa ? <Loader2 size={14} className="spin-icon" /> : <Play size={14} />}
+                    <span>{testingWa ? 'Simulating...' : '🧪 Send Test WhatsApp Lead'}</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+                  {/* WhatsApp Webhook URL */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px' }}>WhatsApp Inbound Webhook URL</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        className="form-input"
+                        value={waWebhookUrl}
+                        style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface)' }}
+                      />
+                      <button
+                        className={`btn ${copiedWaUrl ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                        onClick={() => copyToClipboard(waWebhookUrl, 'wa_url')}
+                      >
+                        {copiedWaUrl ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Verify Token */}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: '12px' }}>WhatsApp Verify Token</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        readOnly
+                        className="form-input"
+                        value={waVerifyToken}
+                        style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface)' }}
+                      />
+                      <button
+                        className={`btn ${copiedWaToken ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                        onClick={() => copyToClipboard(waVerifyToken, 'wa_token')}
+                      >
+                        {copiedWaToken ? <Check size={14} /> : <Copy size={14} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 1-Click WhatsApp Direct Chat Link Generator */}
+                <div style={{ background: 'var(--bg-surface)', padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)', marginBottom: '14px' }}>
+                  <strong style={{ color: 'var(--text-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                    <Share2 size={16} color="#25d366" />
+                    1-Click Direct WhatsApp Lead Generator Link
+                  </strong>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                    Place this link on your Instagram bio, Google Ads Sitelinks, or marketing buttons. When clicked, prospects open WhatsApp directly with your pre-filled inquiry text:
+                  </p>
+                  
+                  <div className="form-grid-2" style={{ marginBottom: '10px' }}>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Your WhatsApp Number (With Country Code)</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="e.g. 919876543210"
+                        value={waCustomPhone}
+                        onChange={(e) => setWaCustomPhone(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '11px' }}>Pre-filled Inbound Message</label>
+                      <input
+                        type="text"
+                        className="form-input"
+                        placeholder="Inquiry message..."
+                        value={waCustomMessage}
+                        onChange={(e) => setWaCustomMessage(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      className="form-input"
+                      value={generatedWaLink}
+                      style={{ flex: 1, minWidth: '220px', fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface-elevated)' }}
+                    />
+                    <button
+                      className={`btn ${copiedWaLink ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                      onClick={() => copyToClipboard(generatedWaLink, 'wa_link')}
+                    >
+                      {copiedWaLink ? <Check size={14} /> : <Copy size={14} />}
+                      <span>{copiedWaLink ? 'Copied Link!' : 'Copy WhatsApp Link'}</span>
+                    </button>
+                    <a
+                      href={generatedWaLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn btn-whatsapp btn-sm"
+                      style={{ textDecoration: 'none', color: '#ffffff' }}
+                    >
+                      <ExternalLink size={14} />
+                      <span>Test Link</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* INTEGRATION 3: UNIVERSAL INBOUND API / ZAPIER / MAKE */}
+              <div style={{ background: 'var(--bg-surface-elevated)', padding: '24px', borderRadius: '14px', border: '1px solid var(--border-medium)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                  <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6366f1' }}>
+                    <Code size={20} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '16px' }}>Universal Inbound Webhook (Zapier, Make.com, WordPress, Custom APIs)</strong>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Send JSON directly from any landing page, custom form, or automation tool</div>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: '14px' }}>
+                  <label className="form-label" style={{ fontSize: '12px' }}>Universal POST Endpoint</label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      className="form-input"
+                      value={universalWebhookUrl}
+                      style={{ fontFamily: 'monospace', fontSize: '12px', background: 'var(--bg-surface)' }}
+                    />
+                    <button
+                      className={`btn ${copiedUniversalUrl ? 'btn-success' : 'btn-secondary'} btn-sm`}
+                      onClick={() => copyToClipboard(universalWebhookUrl, 'universal_url')}
+                    >
+                      {copiedUniversalUrl ? <Check size={14} /> : <Copy size={14} />}
+                      <span>{copiedUniversalUrl ? 'Copied' : 'Copy Endpoint'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-surface)', padding: '14px 18px', borderRadius: '10px', border: '1px solid var(--border-subtle)' }}>
+                  <label className="form-label" style={{ fontSize: '12px', marginBottom: '6px' }}>Sample JSON Request Payload:</label>
+                  <pre style={{ margin: 0, padding: '10px 12px', background: 'var(--bg-surface-elevated)', borderRadius: '8px', fontSize: '12px', color: '#10b981', overflowX: 'auto', fontFamily: 'monospace' }}>
+{`POST ${universalWebhookUrl}
+Content-Type: application/json
+
+{
+  "name": "Kiran Rao",
+  "phone": "+91 9876543210",
+  "email": "kiran@example.com",
+  "company": "Rao Enterprises",
+  "dealValue": 50000,
+  "source": "facebook_ads",  // 'facebook_ads' | 'whatsapp' | 'website' | 'google_ads' | 'referral'
+  "notes": "Interested in premium package",
+  "priority": "high"
+}`}
+                  </pre>
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, DollarSign, Calendar, Search } from 'lucide-react';
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
+import LeadSourceBadge from '../../components/LeadSourceBadge';
 import api from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { formatDate } from '../../utils/date';
@@ -78,6 +79,7 @@ export const StaffCustomersPage = () => {
                     <th>Customer Name</th>
                     <th>Company</th>
                     <th>Closed Deal Amount</th>
+                    <th>Source</th>
                     <th>Phone</th>
                     <th>Email</th>
                     <th>Closed Date</th>
@@ -92,6 +94,9 @@ export const StaffCustomersPage = () => {
                       <td>{c.company || '-'}</td>
                       <td style={{ fontWeight: 800, color: '#10b981', fontSize: '15px' }}>
                         ₹{(c.convertedDealAmount || c.dealValue || 0).toLocaleString('en-IN')}
+                      </td>
+                      <td>
+                        <LeadSourceBadge source={c.source} />
                       </td>
                       <td>{c.phone}</td>
                       <td>{c.email || '-'}</td>
