@@ -114,6 +114,7 @@ export const LeadManagementPage = () => {
   // Bulk Select & Delete State
   const [selectedLeadIds, setSelectedLeadIds] = useState([]);
   const [selectAllAcrossPages, setSelectAllAcrossPages] = useState(false);
+  const [deselectedLeadIds, setDeselectedLeadIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
@@ -124,6 +125,7 @@ export const LeadManagementPage = () => {
   useEffect(() => {
     setPage(1);
     setSelectedLeadIds([]);
+    setDeselectedLeadIds([]);
     setSelectAllAcrossPages(false);
     fetchLeads(1, limit);
   }, [statusFilter, assigneeFilter, sourceFilter, priorityFilter]);
@@ -352,32 +354,55 @@ export const LeadManagementPage = () => {
     }
   };
 
-  // Bulk Selection Logic
+  // Bulk Selection Logic (with exclusion tracking across pagination)
+  const isLeadSelected = (leadId) => {
+    if (selectAllAcrossPages) {
+      return !deselectedLeadIds.includes(leadId);
+    }
+    return selectedLeadIds.includes(leadId);
+  };
+
   const allPageLeadIds = leads.map((l) => l._id);
-  const isAllPageSelected = leads.length > 0 && allPageLeadIds.every((id) => selectedLeadIds.includes(id));
-  const isAllSelected = selectAllAcrossPages || isAllPageSelected;
-  const isSomeSelected = !selectAllAcrossPages && leads.some((l) => selectedLeadIds.includes(l._id)) && !isAllPageSelected;
+  const isAllPageSelected = leads.length > 0 && allPageLeadIds.every((id) => isLeadSelected(id));
+  const isSomePageSelected = leads.length > 0 && allPageLeadIds.some((id) => isLeadSelected(id)) && !isAllPageSelected;
+  const totalSelectedCount = selectAllAcrossPages
+    ? Math.max(0, totalLeads - deselectedLeadIds.length)
+    : selectedLeadIds.length;
 
   const handleToggleSelectAll = () => {
-    if (isAllSelected || selectAllAcrossPages) {
-      setSelectedLeadIds((prev) => prev.filter((id) => !allPageLeadIds.includes(id)));
-      setSelectAllAcrossPages(false);
+    if (selectAllAcrossPages) {
+      if (isAllPageSelected) {
+        // Deselect all on current page (add all current page IDs to exclusions)
+        setDeselectedLeadIds((prev) => Array.from(new Set([...prev, ...allPageLeadIds])));
+      } else {
+        // Re-select all on current page (remove current page IDs from exclusions)
+        setDeselectedLeadIds((prev) => prev.filter((id) => !allPageLeadIds.includes(id)));
+      }
     } else {
-      setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...allPageLeadIds])));
-      setSelectAllAcrossPages(false);
+      if (isAllPageSelected) {
+        // Deselect all on current page
+        setSelectedLeadIds((prev) => prev.filter((id) => !allPageLeadIds.includes(id)));
+      } else {
+        // Select all on current page
+        setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...allPageLeadIds])));
+      }
     }
   };
 
   const handleSelectAllAcrossPages = () => {
     setSelectAllAcrossPages(true);
-    setSelectedLeadIds(allPageLeadIds);
+    setDeselectedLeadIds([]);
+    setSelectedLeadIds([]);
   };
 
   const handleToggleSelectLead = (id) => {
     if (selectAllAcrossPages) {
-      setSelectAllAcrossPages(false);
-      setSelectedLeadIds(allPageLeadIds.filter((item) => item !== id));
+      // Toggle exclusion in all-pages mode
+      setDeselectedLeadIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      );
     } else {
+      // Toggle inclusion in regular mode
       setSelectedLeadIds((prev) =>
         prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
       );
@@ -386,16 +411,18 @@ export const LeadManagementPage = () => {
 
   const handleClearSelection = () => {
     setSelectedLeadIds([]);
+    setDeselectedLeadIds([]);
     setSelectAllAcrossPages(false);
   };
 
   const handleBulkDelete = async () => {
-    if (selectedLeadIds.length === 0 && !selectAllAcrossPages) return;
+    if (totalSelectedCount === 0) return;
     try {
       setBulkDeleting(true);
       const payload = selectAllAcrossPages
         ? {
             selectAllMatching: true,
+            excludeLeadIds: deselectedLeadIds,
             search,
             statusId: statusFilter,
             assignedTo: assigneeFilter,
@@ -408,6 +435,7 @@ export const LeadManagementPage = () => {
       if (res.success) {
         success(res.message || 'Leads deleted successfully');
         setSelectedLeadIds([]);
+        setDeselectedLeadIds([]);
         setSelectAllAcrossPages(false);
         setBulkDeleteModalOpen(false);
         setPage(1);
@@ -788,7 +816,7 @@ export const LeadManagementPage = () => {
         {viewMode === 'table' && (
           <div className="glass-panel" style={{ padding: '20px' }}>
             {/* Bulk Selection Action Toolbar */}
-            {(selectedLeadIds.length > 0 || selectAllAcrossPages) && (
+            {totalSelectedCount > 0 && (
               <div
                 style={{
                   display: 'flex',
@@ -815,12 +843,12 @@ export const LeadManagementPage = () => {
                       fontWeight: 700,
                     }}
                   >
-                    {selectAllAcrossPages ? `${totalLeads} Selected (All Pages)` : `${selectedLeadIds.length} Selected (Current Page)`}
+                    {selectAllAcrossPages ? `${totalSelectedCount} Selected (All Pages)` : `${totalSelectedCount} Selected (Current Page)`}
                   </span>
 
                   {selectAllAcrossPages ? (
                     <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
-                      All <strong>{totalLeads}</strong> leads across all pages matching current filters are selected.
+                      All matching leads across all pages are selected {deselectedLeadIds.length > 0 && `(${deselectedLeadIds.length} excluded)`}.
                     </span>
                   ) : (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -865,7 +893,7 @@ export const LeadManagementPage = () => {
                     style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Trash2 size={14} />
-                    <span>Delete {selectAllAcrossPages ? `All (${totalLeads})` : `Selected (${selectedLeadIds.length})`}</span>
+                    <span>Delete Selected ({totalSelectedCount})</span>
                   </button>
                 </div>
               </div>
@@ -892,12 +920,12 @@ export const LeadManagementPage = () => {
                       <th style={{ width: '40px', textAlign: 'center' }}>
                         <input
                           type="checkbox"
-                          checked={isAllSelected}
+                          checked={isAllPageSelected}
                           ref={(el) => {
-                            if (el) el.indeterminate = isSomeSelected;
+                            if (el) el.indeterminate = isSomePageSelected;
                           }}
                           onChange={handleToggleSelectAll}
-                          title={isAllSelected ? 'Deselect all' : 'Select all on this page'}
+                          title={isAllPageSelected ? 'Deselect all on this page' : 'Select all on this page'}
                           style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#4f46e5' }}
                         />
                       </th>
@@ -913,7 +941,7 @@ export const LeadManagementPage = () => {
                   </thead>
                   <tbody>
                     {leads.map((lead) => {
-                      const isSelected = selectAllAcrossPages || selectedLeadIds.includes(lead._id);
+                      const isSelected = isLeadSelected(lead._id);
                       return (
                         <tr
                           key={lead._id}
@@ -1980,7 +2008,7 @@ export const LeadManagementPage = () => {
               ) : (
                 <>
                   <Trash2 size={15} />
-                  <span>Permanently Delete ({selectAllAcrossPages ? totalLeads : selectedLeadIds.length})</span>
+                  <span>Permanently Delete ({totalSelectedCount})</span>
                 </>
               )}
             </button>
@@ -1991,13 +2019,13 @@ export const LeadManagementPage = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <AlertTriangle size={24} color="#e11d48" style={{ flexShrink: 0 }} />
             <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-              Permanently delete {selectAllAcrossPages ? `all ${totalLeads} matching leads across all pages` : `${selectedLeadIds.length} ${selectedLeadIds.length === 1 ? 'selected lead' : 'selected leads'}`}?
+              Permanently delete {selectAllAcrossPages ? `all ${totalSelectedCount} matching leads across all pages` : `${totalSelectedCount} ${totalSelectedCount === 1 ? 'selected lead' : 'selected leads'}`}?
             </strong>
           </div>
           <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             {selectAllAcrossPages
-              ? `This will permanently remove all ${totalLeads} leads matching your current active filters along with their timeline logs and activity history from your CRM database.`
-              : `This will permanently remove the ${selectedLeadIds.length} selected lead records along with all their timeline logs, follow-up history, and customer associations from your CRM database.`}
+              ? `This will permanently remove all ${totalSelectedCount} leads matching your current active filters along with their timeline logs and activity history from your CRM database.`
+              : `This will permanently remove the ${totalSelectedCount} selected lead records along with all their timeline logs, follow-up history, and customer associations from your CRM database.`}
           </p>
           <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#9f1239' }}>
             <strong>Warning:</strong> This action is permanent and cannot be undone.

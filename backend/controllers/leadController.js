@@ -1007,6 +1007,7 @@ export const bulkDeleteLeads = async (req, res) => {
     const {
       leadIds,
       selectAllMatching,
+      excludeLeadIds,
       search,
       statusId,
       assignedTo,
@@ -1042,6 +1043,10 @@ export const bulkDeleteLeads = async (req, res) => {
           { email: { $regex: search, $options: 'i' } },
           { company: { $regex: search, $options: 'i' } },
         ];
+      }
+
+      if (Array.isArray(excludeLeadIds) && excludeLeadIds.length > 0) {
+        query._id = { $nin: excludeLeadIds };
       }
 
       // Find matching lead IDs first to delete associated activity logs
