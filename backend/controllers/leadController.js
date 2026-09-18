@@ -1066,11 +1066,16 @@ export const bulkDeleteLeads = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide an array of lead IDs to delete' });
     }
 
+    const deleteQuery = { _id: { $in: leadIds }, tenantId };
+    if (req.user.role === 'staff') {
+      deleteQuery.assignedTo = req.user._id;
+    }
+
     // Delete associated ActivityLogs
     await ActivityLog.deleteMany({ leadId: { $in: leadIds }, tenantId });
 
     // Delete leads belonging to this tenant
-    const result = await Lead.deleteMany({ _id: { $in: leadIds }, tenantId });
+    const result = await Lead.deleteMany(deleteQuery);
 
     return res.json({
       success: true,
@@ -1078,6 +1083,7 @@ export const bulkDeleteLeads = async (req, res) => {
       deletedCount: result.deletedCount,
     });
   } catch (error) {
+    console.error('Bulk Delete Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -65,10 +65,11 @@ router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
 router.put('/:id/reassign', authorize('admin'), reassignLead);
 
 // Base resource operations
-router.post('/bulk-delete', authorize('admin'), bulkDeleteLeads);
+router.post('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
+router.delete('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
 router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
 router.put('/:id', authorize('admin', 'staff'), updateLead);
-router.delete('/:id', authorize('admin'), deleteLead);
+router.delete('/:id', authorize('admin', 'staff'), deleteLead);
 router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
 
 export default router;

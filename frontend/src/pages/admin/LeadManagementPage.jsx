@@ -354,8 +354,9 @@ export const LeadManagementPage = () => {
 
   // Bulk Selection Logic
   const allPageLeadIds = leads.map((l) => l._id);
-  const isAllSelected = leads.length > 0 && allPageLeadIds.every((id) => selectedLeadIds.includes(id));
-  const isSomeSelected = (leads.some((l) => selectedLeadIds.includes(l._id)) || selectAllAcrossPages) && !isAllSelected;
+  const isAllPageSelected = leads.length > 0 && allPageLeadIds.every((id) => selectedLeadIds.includes(id));
+  const isAllSelected = selectAllAcrossPages || isAllPageSelected;
+  const isSomeSelected = !selectAllAcrossPages && leads.some((l) => selectedLeadIds.includes(l._id)) && !isAllPageSelected;
 
   const handleToggleSelectAll = () => {
     if (isAllSelected || selectAllAcrossPages) {
@@ -375,10 +376,12 @@ export const LeadManagementPage = () => {
   const handleToggleSelectLead = (id) => {
     if (selectAllAcrossPages) {
       setSelectAllAcrossPages(false);
+      setSelectedLeadIds(allPageLeadIds.filter((item) => item !== id));
+    } else {
+      setSelectedLeadIds((prev) =>
+        prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      );
     }
-    setSelectedLeadIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
   };
 
   const handleClearSelection = () => {
@@ -894,7 +897,7 @@ export const LeadManagementPage = () => {
                             if (el) el.indeterminate = isSomeSelected;
                           }}
                           onChange={handleToggleSelectAll}
-                          title={isAllSelected ? 'Deselect all on this page' : 'Select all on this page'}
+                          title={isAllSelected ? 'Deselect all' : 'Select all on this page'}
                           style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#4f46e5' }}
                         />
                       </th>
@@ -910,7 +913,7 @@ export const LeadManagementPage = () => {
                   </thead>
                   <tbody>
                     {leads.map((lead) => {
-                      const isSelected = selectedLeadIds.includes(lead._id);
+                      const isSelected = selectAllAcrossPages || selectedLeadIds.includes(lead._id);
                       return (
                         <tr
                           key={lead._id}
