@@ -41,11 +41,15 @@ const handleResponse = async (response) => {
   } else if (contentType && contentType.includes('text/csv')) {
     return await response.blob();
   } else {
-    data = { message: await response.text() };
+    const rawText = await response.text();
+    // Parse HTML tags or title if server returned an HTML error page
+    const match = rawText.match(/<pre>(.*?)<\/pre>/is) || rawText.match(/<title>(.*?)<\/title>/is);
+    const cleanMsg = match ? match[1].replace(/<[^>]+>/g, '').trim() : rawText.trim();
+    data = { message: cleanMsg.length > 200 ? `HTTP ${response.status}: ${response.statusText}` : cleanMsg };
   }
 
   if (!response.ok) {
-    const error = new Error(data?.message || 'Request failed');
+    const error = new Error(data?.message || `Request failed with status ${response.status}`);
     error.status = response.status;
     error.data = data;
     error.subscriptionExpired = data?.subscriptionExpired || false;

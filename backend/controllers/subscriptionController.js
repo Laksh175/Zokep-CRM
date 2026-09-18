@@ -348,10 +348,17 @@ export const getSubscriptionInvoice = async (req, res) => {
 
     // Check permission: Super Admin can view all; Admin can only view their own tenantId
     if (user.role !== 'super_admin') {
-      const userTenantId = req.tenantId || user._id;
-      if (String(subscription.tenantId?._id || subscription.tenantId) !== String(userTenantId)) {
+      const userTenantId = String(req.tenantId || user._id);
+      const subTenantId = String(subscription.tenantId?._id || subscription.tenantId || '');
+      if (subTenantId !== userTenantId) {
         return res.status(403).json({ success: false, message: 'You do not have authorization to view this receipt' });
       }
+    }
+
+    // Auto-generate invoice number for older subscriptions if missing
+    if (!subscription.invoiceNumber) {
+      subscription.invoiceNumber = `INV-${new Date(subscription.createdAt || Date.now()).getTime().toString().slice(-6)}-${Math.floor(100 + Math.random() * 900)}`;
+      await subscription.save().catch(() => {});
     }
 
     return res.json({

@@ -22,5 +22,6 @@ router.use(protect);
 router.post('/verify-payment', authorize('admin'), verifyRazorpayPaymentAndRenew);
 router.get('/my-subscription', authorize('admin'), getMySubscription);
 router.get('/invoice/:id', authorize('admin', 'super_admin'), getSubscriptionInvoice);
+router.get('/:id/invoice', authorize('admin', 'super_admin'), getSubscriptionInvoice);
 
 export default router;

@@ -56,6 +56,7 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/leads', leadRoutes);
 app.use('/api/settings', settingRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/public', publicRoutes);
 
 // Health check
@@ -64,6 +65,14 @@ app.get('/api/health', (req, res) => {
     status: 'online',
     system: 'Zokep SaaS Lead Management CRM',
     timestamp: new Date(),
+  });
+});
+
+// 404 handler for unmatched API routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint not found: ${req.method} ${req.originalUrl}`,
   });
 });
 
