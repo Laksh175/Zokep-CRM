@@ -312,7 +312,7 @@ export const StaffFollowupsPage = () => {
               <CheckCircle2 size={48} color="#10b981" style={{ margin: '0 auto 12px' }} />
               <h3 style={{ fontSize: '18px', fontWeight: 700 }}>
                 {activeTab === 'today'
-                  ? "You're All Caught Up for Today! 🎉"
+                  ? "You're All Caught Up for Today!"
                   : activeTab === 'overdue'
                   ? 'No Overdue Follow-ups! Great job.'
                   : 'No Scheduled Follow-ups Found'}

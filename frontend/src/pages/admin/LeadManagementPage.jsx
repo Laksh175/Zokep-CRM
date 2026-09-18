@@ -667,12 +667,14 @@ export const LeadManagementPage = () => {
                         </td>
                         <td>
                           {lead.nextFollowupDate ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                              <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600 }}>
-                                📅 {formatDate(lead.nextFollowupDate)}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                              <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Calendar size={12} color="#d97706" />
+                                <span>{formatDate(lead.nextFollowupDate)}</span>
                               </span>
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                                ⏰ {formatTime(lead.nextFollowupDate)}
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={11} color="var(--text-muted)" />
+                                <span>{formatTime(lead.nextFollowupDate)}</span>
                               </span>
                             </div>
                           ) : (
@@ -906,7 +908,12 @@ export const LeadManagementPage = () => {
                               ]}
                             />
                           </div>
-                          {lead.isConverted && <span style={{ color: '#10b981', fontWeight: 700 }}>Won 🎉</span>}
+                          {lead.isConverted && (
+                            <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}>
+                              <CheckCircle2 size={13} color="#10b981" />
+                              <span>Won</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1136,7 +1143,10 @@ export const LeadManagementPage = () => {
                   </Badge>
                   <LeadSourceBadge source={activeLead.source} />
                   {activeLead.isConverted && (
-                    <Badge color="#10b981">Won Customer 🎉</Badge>
+                    <Badge color="#10b981">
+                      <CheckCircle2 size={12} color="#ffffff" style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                      <span>Won Customer</span>
+                    </Badge>
                   )}
                 </div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>

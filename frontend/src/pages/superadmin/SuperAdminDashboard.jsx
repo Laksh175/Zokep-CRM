@@ -47,8 +47,9 @@ const CustomRevenueTooltip = ({ active, payload, label }) => {
           fontSize: '13px',
         }}
       >
-        <p style={{ fontWeight: 700, marginBottom: '6px', color: '#002244' }}>
-          📅 {fullDate}
+        <p style={{ fontWeight: 700, marginBottom: '6px', color: '#002244', display: 'flex', alignItems: 'center', gap: '5px' }}>
+          <Calendar size={14} color="#4f46e5" />
+          <span>{fullDate}</span>
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {payload.map((entry, index) => (
@@ -176,11 +177,13 @@ export const SuperAdminDashboard = () => {
                 </p>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span className="badge" style={{ backgroundColor: '#e8f8ef', color: '#00a651', border: '1px solid #a7f3d0' }}>
-                  ● Revenue (₹)
+                <span className="badge" style={{ backgroundColor: '#e8f8ef', color: '#00a651', border: '1px solid #a7f3d0', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00a651' }}></span>
+                  <span>Revenue (₹)</span>
                 </span>
-                <span className="badge" style={{ backgroundColor: '#f0f6fc', color: '#003865', border: '1px solid #badcf5' }}>
-                  ● Subscriptions
+                <span className="badge" style={{ backgroundColor: '#f0f6fc', color: '#003865', border: '1px solid #badcf5', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#003865' }}></span>
+                  <span>Subscriptions</span>
                 </span>
               </div>
             </div>

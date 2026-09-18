@@ -200,8 +200,9 @@ export const InvoiceReceiptModal = ({ isOpen, onClose, subscriptionId, initialDa
             </div>
 
             <div style={{ textAlign: 'right' }}>
-              <span style={{ display: 'inline-block', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
-                ● PAID / ACTIVE
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>
+                <CheckCircle2 size={13} color="#059669" />
+                <span>PAID / ACTIVE</span>
               </span>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
                 TAX INVOICE & RECEIPT

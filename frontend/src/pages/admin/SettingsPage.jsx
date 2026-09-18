@@ -604,7 +604,16 @@ export const SettingsPage = () => {
                         <code style={{ fontSize: '11px', marginLeft: 8 }}>{st.color}</code>
                       </td>
                       <td>{st.isDefault ? <Badge color="#10b981">Default (Inflow)</Badge> : '-'}</td>
-                      <td>{st.isConvertedState ? <Badge color="#10b981">Converts to Customer 🎉</Badge> : '-'}</td>
+                      <td>
+                        {st.isConvertedState ? (
+                          <Badge color="#10b981">
+                            <CheckCircle2 size={12} color="#ffffff" style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                            <span>Converts to Customer</span>
+                          </Badge>
+                        ) : (
+                          '-'
+                        )}
+                      </td>
                       <td>{st.isLostState ? <Badge color="#ef4444">Closed / Lost</Badge> : '-'}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '6px' }}>
