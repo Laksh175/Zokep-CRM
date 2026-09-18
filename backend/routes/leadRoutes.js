@@ -53,23 +53,22 @@ const upload = multer({
 // All routes below are protected
 router.use(protect);
 
+// Static Collection Routes (must precede /:id)
 router.get('/', authorize('admin', 'staff'), getLeads);
+router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
+router.post('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
+router.delete('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
+router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
 router.get('/export-csv', authorize('admin', 'staff'), exportLeadsCSV);
 router.get('/sample-csv', authorize('admin', 'staff'), getSampleLeadCSV);
-router.get('/:id', authorize('admin', 'staff'), getLeadById);
 
-// Specific sub-resource actions
+// Parameterized Member Routes (/:id)
+router.get('/:id', authorize('admin', 'staff'), getLeadById);
+router.put('/:id', authorize('admin', 'staff'), updateLead);
+router.delete('/:id', authorize('admin', 'staff'), deleteLead);
 router.put('/:id/status', authorize('admin', 'staff'), updateLeadStatusDirectly);
 router.post('/:id/followup', authorize('admin', 'staff'), addFollowupAndUpdateStatus);
 router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
 router.put('/:id/reassign', authorize('admin'), reassignLead);
-
-// Base resource operations
-router.post('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
-router.delete('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
-router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
-router.put('/:id', authorize('admin', 'staff'), updateLead);
-router.delete('/:id', authorize('admin', 'staff'), deleteLead);
-router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
 
 export default router;

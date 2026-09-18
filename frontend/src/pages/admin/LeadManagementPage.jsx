@@ -431,8 +431,18 @@ export const LeadManagementPage = () => {
           }
         : { leadIds: selectedLeadIds };
 
-      const res = await api.post('/leads/bulk-delete', payload);
-      if (res.success) {
+      let res;
+      try {
+        res = await api.post('/leads/bulk-delete', payload);
+      } catch (errPost) {
+        if (errPost?.status === 404 || errPost?.message?.includes('Cannot POST') || errPost?.message?.includes('404')) {
+          res = await api.delete('/leads/bulk-delete', payload);
+        } else {
+          throw errPost;
+        }
+      }
+
+      if (res && res.success) {
         success(res.message || 'Leads deleted successfully');
         setSelectedLeadIds([]);
         setDeselectedLeadIds([]);
