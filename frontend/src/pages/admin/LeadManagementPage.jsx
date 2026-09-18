@@ -48,7 +48,7 @@ import { formatDate, formatDateTime, formatTime, toDateTimeLocalInput } from '..
 import confetti from 'canvas-confetti';
 
 export const LeadManagementPage = () => {
-  const { success, error } = useToast();
+  const { success, error, info } = useToast();
 
   const [leads, setLeads] = useState([]);
   const [statuses, setStatuses] = useState([]);
@@ -109,6 +109,12 @@ export const LeadManagementPage = () => {
   const [csvFile, setCsvFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [importResult, setImportResult] = useState(null);
+  const [bulkAssignee, setBulkAssignee] = useState('');
+
+  // Bulk Select & Delete State
+  const [selectedLeadIds, setSelectedLeadIds] = useState([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
 
   useEffect(() => {
     fetchMetadata();
@@ -332,6 +338,7 @@ export const LeadManagementPage = () => {
       if (res.success) {
         success('Lead deleted');
         setLeads((prev) => prev.filter((l) => l._id !== id));
+        setSelectedLeadIds((prev) => prev.filter((leadId) => leadId !== id));
         setTotalLeads((prev) => Math.max(0, prev - 1));
         if (activeLead?._id === id) setDetailsModalOpen(false);
       }
@@ -339,6 +346,47 @@ export const LeadManagementPage = () => {
       error(err.message || 'Failed to delete lead');
     } finally {
       setDeletingLeadId(null);
+    }
+  };
+
+  // Bulk Selection Logic
+  const allPageLeadIds = leads.map((l) => l._id);
+  const isAllSelected = leads.length > 0 && allPageLeadIds.every((id) => selectedLeadIds.includes(id));
+  const isSomeSelected = leads.some((l) => selectedLeadIds.includes(l._id)) && !isAllSelected;
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !allPageLeadIds.includes(id)));
+    } else {
+      setSelectedLeadIds((prev) => Array.from(new Set([...prev, ...allPageLeadIds])));
+    }
+  };
+
+  const handleToggleSelectLead = (id) => {
+    setSelectedLeadIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedLeadIds([]);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedLeadIds.length === 0) return;
+    try {
+      setBulkDeleting(true);
+      const res = await api.post('/leads/bulk-delete', { leadIds: selectedLeadIds });
+      if (res.success) {
+        success(res.message || `Successfully deleted ${selectedLeadIds.length} leads`);
+        setSelectedLeadIds([]);
+        setBulkDeleteModalOpen(false);
+        fetchLeads(page, limit);
+      }
+    } catch (err) {
+      error(err.message || 'Failed to delete selected leads');
+    } finally {
+      setBulkDeleting(false);
     }
   };
 
@@ -505,6 +553,50 @@ export const LeadManagementPage = () => {
     }
   };
 
+  const handleDownloadFailedCSV = () => {
+    if (!importResult?.errors || importResult.errors.length === 0) return;
+
+    try {
+      // Gather all keys from rawRow plus 'Validation Error Reason'
+      const rows = importResult.errors.map((errItem) => {
+        const base = errItem.rawRow ? { ...errItem.rawRow } : { Name: errItem.name, Phone: errItem.phone };
+        return {
+          'CSV Row #': errItem.row,
+          ...base,
+          'Validation Error Reason': errItem.reason,
+        };
+      });
+
+      // Extract unique column headers
+      const headers = Array.from(
+        new Set(rows.flatMap((r) => Object.keys(r)))
+      );
+
+      // Format as CSV
+      const csvContent = [
+        headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(','),
+        ...rows.map((row) =>
+          headers
+            .map((h) => `"${String(row[h] ?? '').replace(/"/g, '""')}"`)
+            .join(',')
+        ),
+      ].join('\r\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `failed_lead_imports_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      success('Failed records CSV downloaded. You can fix the errors in Excel and re-upload.');
+    } catch (err) {
+      error('Failed to export failed records CSV');
+    }
+  };
+
   const handleBulkUpload = async (e) => {
     e?.preventDefault();
     if (!csvFile) {
@@ -516,6 +608,9 @@ export const LeadManagementPage = () => {
       setUploading(true);
       const formData = new FormData();
       formData.append('file', csvFile);
+      if (bulkAssignee) {
+        formData.append('assignedTo', bulkAssignee);
+      }
 
       const res = await api.upload('/leads/bulk-upload', formData);
       if (res.success) {
@@ -662,6 +757,62 @@ export const LeadManagementPage = () => {
         {/* VIEW 1: DATA TABLE */}
         {viewMode === 'table' && (
           <div className="glass-panel" style={{ padding: '20px' }}>
+            {/* Bulk Selection Action Toolbar */}
+            {selectedLeadIds.length > 0 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 18px',
+                  background: '#1e293b',
+                  color: '#ffffff',
+                  borderRadius: '10px',
+                  marginBottom: '16px',
+                  boxShadow: '0 8px 20px -4px rgba(0,0,0,0.25)',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span
+                    style={{
+                      background: '#4f46e5',
+                      color: '#fff',
+                      padding: '3px 10px',
+                      borderRadius: '12px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                    }}
+                  >
+                    {selectedLeadIds.length} Selected
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#cbd5e1' }}>
+                    {selectedLeadIds.length === 1 ? '1 lead selected' : `${selectedLeadIds.length} leads selected`}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleClearSelection}
+                    style={{ background: 'rgba(255,255,255,0.1)', color: '#fff', borderColor: 'rgba(255,255,255,0.2)' }}
+                  >
+                    Deselect All
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => setBulkDeleteModalOpen(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Selected ({selectedLeadIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {loading ? (
               <p style={{ textAlign: 'center', padding: '24px 0' }}>Loading leads...</p>
             ) : leads.length === 0 ? (
@@ -680,6 +831,18 @@ export const LeadManagementPage = () => {
                 <table className="crm-table">
                   <thead>
                     <tr>
+                      <th style={{ width: '40px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          ref={(el) => {
+                            if (el) el.indeterminate = isSomeSelected;
+                          }}
+                          onChange={handleToggleSelectAll}
+                          title={isAllSelected ? 'Deselect all on this page' : 'Select all on this page'}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#4f46e5' }}
+                        />
+                      </th>
                       <th>Lead Contact</th>
                       <th>Company</th>
                       <th>Deal Value</th>
@@ -691,162 +854,179 @@ export const LeadManagementPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {leads.map((lead) => (
-                      <tr key={lead._id}>
-                        <td>
-                          <a
-                            href="#details"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              openLeadDetails(lead);
-                            }}
-                            style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}
-                          >
-                            {lead.name}
-                          </a>
-                          <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                            {lead.phone} {lead.email && `• ${lead.email}`}
-                          </div>
-                        </td>
-                        <td>{lead.company || '-'}</td>
-                        <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
-                          ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
-                        </td>
-                        <td>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              padding: '4px 10px',
-                              borderRadius: '20px',
-                              backgroundColor: `${lead.statusId?.color || '#3b82f6'}18`,
-                              color: lead.statusId?.color || '#3b82f6',
-                              border: `1px solid ${lead.statusId?.color || '#3b82f6'}40`,
-                              whiteSpace: 'nowrap',
-                            }}
-                            title="Pipeline status is updated by assigned Sales Staff"
-                          >
+                    {leads.map((lead) => {
+                      const isSelected = selectedLeadIds.includes(lead._id);
+                      return (
+                        <tr
+                          key={lead._id}
+                          style={{
+                            backgroundColor: isSelected ? 'rgba(79, 70, 229, 0.06)' : undefined,
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <td style={{ width: '40px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectLead(lead._id)}
+                              style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#4f46e5' }}
+                            />
+                          </td>
+                          <td>
+                            <a
+                              href="#details"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                openLeadDetails(lead);
+                              }}
+                              style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}
+                            >
+                              {lead.name}
+                            </a>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                              {lead.phone} {lead.email && `• ${lead.email}`}
+                            </div>
+                          </td>
+                          <td>{lead.company || '-'}</td>
+                          <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
+                            ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
+                          </td>
+                          <td>
                             <span
                               style={{
-                                width: '6px',
-                                height: '6px',
-                                borderRadius: '50%',
-                                backgroundColor: lead.statusId?.color || '#3b82f6',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                padding: '4px 10px',
+                                borderRadius: '20px',
+                                backgroundColor: `${lead.statusId?.color || '#3b82f6'}18`,
+                                color: lead.statusId?.color || '#3b82f6',
+                                border: `1px solid ${lead.statusId?.color || '#3b82f6'}40`,
+                                whiteSpace: 'nowrap',
                               }}
+                              title="Pipeline status is updated by assigned Sales Staff"
+                            >
+                              <span
+                                style={{
+                                  width: '6px',
+                                  height: '6px',
+                                  borderRadius: '50%',
+                                  backgroundColor: lead.statusId?.color || '#3b82f6',
+                                }}
+                              />
+                              {lead.statusId?.name || 'New Lead'}
+                            </span>
+                          </td>
+                          <td>
+                            <LeadSourceBadge source={lead.source} />
+                          </td>
+                          <td>
+                            <CustomSelect
+                              value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
+                              onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
+                              placeholder="-- Unassigned --"
+                              showArrow={true}
+                              style={{ minWidth: '130px' }}
+                              title="Assign to staff member"
+                              options={[
+                                { value: '', label: '-- Unassigned --' },
+                                ...staffList.map((s) => ({
+                                  value: s._id || s.id,
+                                  label: s.name,
+                                })),
+                              ]}
                             />
-                            {lead.statusId?.name || 'New Lead'}
-                          </span>
-                        </td>
-                        <td>
-                          <LeadSourceBadge source={lead.source} />
-                        </td>
-                        <td>
-                          <CustomSelect
-                            value={lead.assignedTo?._id || lead.assignedTo?.id || (typeof lead.assignedTo === 'string' ? lead.assignedTo : '')}
-                            onChange={(e) => handleQuickReassign(lead._id, e.target.value)}
-                            placeholder="-- Unassigned --"
-                            showArrow={true}
-                            style={{ minWidth: '130px' }}
-                            title="Assign to staff member"
-                            options={[
-                              { value: '', label: '-- Unassigned --' },
-                              ...staffList.map((s) => ({
-                                value: s._id || s.id,
-                                label: s.name,
-                              })),
-                            ]}
-                          />
-                        </td>
-                        <td>
-                          {lead.nextFollowupDate ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                              <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <Calendar size={12} color="#d97706" />
-                                <span>{formatDate(lead.nextFollowupDate)}</span>
-                              </span>
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <Clock size={11} color="var(--text-muted)" />
-                                <span>{formatTime(lead.nextFollowupDate)}</span>
-                              </span>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
-                          )}
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            {/* Edit Lead */}
-                            <button
-                              onClick={() => openEditLeadModal(lead)}
-                              className="btn btn-secondary btn-action"
-                              title="Edit Lead Information"
-                            >
-                              <Edit2 size={15} color="#003865" />
-                            </button>
+                          </td>
+                          <td>
+                            {lead.nextFollowupDate ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Calendar size={12} color="#d97706" />
+                                  <span>{formatDate(lead.nextFollowupDate)}</span>
+                                </span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                  <Clock size={11} color="var(--text-muted)" />
+                                  <span>{formatTime(lead.nextFollowupDate)}</span>
+                                </span>
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>None</span>
+                            )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {/* Edit Lead */}
+                              <button
+                                onClick={() => openEditLeadModal(lead)}
+                                className="btn btn-secondary btn-action"
+                                title="Edit Lead Information"
+                              >
+                                <Edit2 size={15} color="#003865" />
+                              </button>
 
-                            {/* 1-Click WhatsApp */}
-                            <button
-                              onClick={() => {
-                                setQuickActionLead(lead);
-                                setWhatsAppModalOpen(true);
-                              }}
-                              className="btn btn-whatsapp btn-sm"
-                              title="1-Click WhatsApp"
-                            >
-                              <WhatsAppIcon size={14} color="#ffffff" />
-                              <span>WA</span>
-                            </button>
-
-                            {/* 1-Click Email */}
-                            {lead.email && (
+                              {/* 1-Click WhatsApp */}
                               <button
                                 onClick={() => {
                                   setQuickActionLead(lead);
-                                  setEmailModalOpen(true);
+                                  setWhatsAppModalOpen(true);
                                 }}
-                                className="btn btn-secondary btn-action"
-                                title="1-Click Email"
+                                className="btn btn-whatsapp btn-sm"
+                                title="1-Click WhatsApp"
                               >
-                                <Mail size={15} color="#0284c7" />
+                                <WhatsAppIcon size={14} color="#ffffff" />
+                                <span>WA</span>
                               </button>
-                            )}
 
-                            {/* Convert */}
-                            {!lead.isConverted && (
+                              {/* 1-Click Email */}
+                              {lead.email && (
+                                <button
+                                  onClick={() => {
+                                    setQuickActionLead(lead);
+                                    setEmailModalOpen(true);
+                                  }}
+                                  className="btn btn-secondary btn-action"
+                                  title="1-Click Email"
+                                >
+                                  <Mail size={15} color="#475569" />
+                                </button>
+                              )}
+
+                              {/* Convert */}
+                              {!lead.isConverted && (
+                                <button
+                                  onClick={() => handleConvertLead(lead._id)}
+                                  className="btn btn-success btn-action"
+                                  title="Convert to Customer Deal"
+                                >
+                                  <UserCheck size={15} color="#ffffff" />
+                                </button>
+                              )}
+
+                              {/* Details */}
                               <button
-                                onClick={() => handleConvertToCustomer(lead)}
-                                className="btn btn-success btn-action"
-                                title="Convert to Customer Deal"
+                                onClick={() => openLeadDetails(lead)}
+                                className="btn btn-secondary btn-action"
+                                title="Open Details & Activity Log"
                               >
-                                <UserCheck size={15} color="#ffffff" />
+                                <ExternalLink size={15} color="#475569" />
                               </button>
-                            )}
 
-                            {/* Details */}
-                            <button
-                              onClick={() => openLeadDetails(lead)}
-                              className="btn btn-secondary btn-action"
-                              title="Open Details & Activity Log"
-                            >
-                              <ExternalLink size={15} color="#475569" />
-                            </button>
-
-                            {/* Delete */}
-                            <button
-                              onClick={(e) => handleDeleteLead(lead._id, e)}
-                              className="btn btn-danger btn-action"
-                              title="Delete Lead"
-                              disabled={deletingLeadId === lead._id}
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                              {/* Delete */}
+                              <button
+                                onClick={(e) => handleDeleteLead(lead._id, e)}
+                                className="btn btn-danger btn-action"
+                                title="Delete Lead"
+                                disabled={deletingLeadId === lead._id}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1438,6 +1618,7 @@ export const LeadManagementPage = () => {
           setUploadModalOpen(false);
           setImportResult(null);
           setCsvFile(null);
+          setBulkAssignee('');
         }}
         title={importResult ? 'Bulk Import Results Summary' : 'Bulk Import Leads via CSV'}
         maxWidth={importResult ? '760px' : '580px'}
@@ -1463,6 +1644,7 @@ export const LeadManagementPage = () => {
                   setUploadModalOpen(false);
                   setImportResult(null);
                   setCsvFile(null);
+                  setBulkAssignee('');
                 }}
               >
                 Done & View Pipeline
@@ -1485,6 +1667,7 @@ export const LeadManagementPage = () => {
                   onClick={() => {
                     setUploadModalOpen(false);
                     setCsvFile(null);
+                    setBulkAssignee('');
                   }}
                   disabled={uploading}
                 >
@@ -1539,21 +1722,42 @@ export const LeadManagementPage = () => {
                 <div>
                   <strong style={{ color: '#15803d', fontSize: '14px', display: 'block' }}>All leads imported cleanly!</strong>
                   <span style={{ fontSize: '12px', color: '#166534' }}>
-                    Every record met required field formats and was assigned default pipeline status.
+                    Every record met required field formats and was assigned to the pipeline.
                   </span>
                 </div>
               </div>
             )}
 
-            {/* Error table if skippedCount > 0 */}
+            {/* Error table & Download Failed CSV if skippedCount > 0 */}
             {importResult.errors && importResult.errors.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <AlertCircle size={16} color="#e11d48" />
-                  <strong style={{ fontSize: '13px', color: '#991b1b' }}>
-                    Validation Error Breakdown ({importResult.errors.length} skipped {importResult.errors.length === 1 ? 'row' : 'rows'}):
-                  </strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} color="#e11d48" />
+                    <strong style={{ fontSize: '13px', color: '#991b1b' }}>
+                      Validation Error Breakdown ({importResult.errors.length} skipped {importResult.errors.length === 1 ? 'row' : 'rows'}):
+                    </strong>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleDownloadFailedCSV}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      color: '#b91c1c',
+                      background: '#fff1f2',
+                      borderColor: '#fecdd3',
+                      fontWeight: 600,
+                    }}
+                    title="Export CSV containing all failed rows and their error reasons"
+                  >
+                    <Download size={13} color="#b91c1c" />
+                    <span>Download Failed Records (.CSV)</span>
+                  </button>
                 </div>
+
                 <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid #fecdd3', borderRadius: '8px', background: '#fff' }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
                     <thead>
@@ -1582,8 +1786,8 @@ export const LeadManagementPage = () => {
                     </tbody>
                   </table>
                 </div>
-                <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Tip: Fix the highlighted issues in your CSV spreadsheet and re-upload to import the remaining leads.
+                <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Tip: Click <strong>"Download Failed Records (.CSV)"</strong> to get a spreadsheet of failed rows with their reasons, fix them, and re-upload.
                 </p>
               </div>
             )}
@@ -1607,6 +1811,29 @@ export const LeadManagementPage = () => {
                 <Download size={14} color="#4f46e5" />
                 <span>Sample CSV</span>
               </button>
+            </div>
+
+            {/* Staff Assignment Dropdown */}
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                <UserCheck size={14} color="#4f46e5" />
+                <span>Assign Leads to Staff Member (Optional)</span>
+              </label>
+              <CustomSelect
+                value={bulkAssignee}
+                onChange={(e) => setBulkAssignee(e.target.value)}
+                placeholder="-- Unassigned / Auto --"
+                options={[
+                  { value: '', label: '-- Unassigned / Auto --' },
+                  ...staffList.map((s) => ({
+                    value: s._id || s.id,
+                    label: `${s.name} (${s.email})`,
+                  })),
+                ]}
+              />
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', display: 'block' }}>
+                All leads imported from this batch will automatically be assigned to the selected team member.
+              </span>
             </div>
 
             {/* Validation Rules Card */}
@@ -1663,6 +1890,60 @@ export const LeadManagementPage = () => {
           onEmailSuccess={fetchLeads}
         />
       )}
+
+      {/* BULK DELETE CONFIRMATION MODAL */}
+      <Modal
+        isOpen={bulkDeleteModalOpen}
+        onClose={() => setBulkDeleteModalOpen(false)}
+        title="Confirm Bulk Deletion"
+        maxWidth="480px"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', width: '100%' }}>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => setBulkDeleteModalOpen(false)}
+              disabled={bulkDeleting}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            >
+              {bulkDeleting ? (
+                <>
+                  <span className="btn-spinner" />
+                  <span>Deleting...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  <span>Permanently Delete ({selectedLeadIds.length})</span>
+                </>
+              )}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <AlertTriangle size={24} color="#e11d48" style={{ flexShrink: 0 }} />
+            <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
+              Permanently delete {selectedLeadIds.length} {selectedLeadIds.length === 1 ? 'selected lead' : 'selected leads'}?
+            </strong>
+          </div>
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            This will permanently remove the {selectedLeadIds.length} selected lead records along with all their timeline logs, follow-up history, and customer associations from your CRM database.
+          </p>
+          <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#9f1239' }}>
+            <strong>Warning:</strong> This action is permanent and cannot be undone.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

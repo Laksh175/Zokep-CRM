@@ -604,6 +604,20 @@ export const bulkUploadLeads = async (req, res) => {
       (await LeadStatus.findOne({ tenantId, isDefault: true })) ||
       (await LeadStatus.findOne({ tenantId }).sort({ order: 1 }));
 
+    // Extract optional assignedTo staff from request body
+    const { assignedTo } = req.body || {};
+    let targetAssignedTo = null;
+    let assignedStaffDoc = null;
+
+    if (req.user.role === 'staff') {
+      targetAssignedTo = req.user._id;
+    } else if (assignedTo && assignedTo !== '') {
+      assignedStaffDoc = await User.findOne({ _id: assignedTo, tenantId });
+      if (assignedStaffDoc) {
+        targetAssignedTo = assignedStaffDoc._id;
+      }
+    }
+
     const validSources = [
       'manual',
       'meta_ads',
@@ -667,6 +681,7 @@ export const bulkUploadLeads = async (req, res) => {
                 name: '(Empty)',
                 phone: rawPhone || '-',
                 reason: 'Missing required field: Lead Name',
+                rawRow: row,
               });
               continue;
             }
@@ -677,6 +692,7 @@ export const bulkUploadLeads = async (req, res) => {
                 name: rawName,
                 phone: rawPhone || '-',
                 reason: 'Lead Name must be at least 2 characters',
+                rawRow: row,
               });
               continue;
             }
@@ -689,6 +705,7 @@ export const bulkUploadLeads = async (req, res) => {
                 name: rawName,
                 phone: '(Empty)',
                 reason: 'Missing required field: Phone Number',
+                rawRow: row,
               });
               continue;
             }
@@ -703,6 +720,7 @@ export const bulkUploadLeads = async (req, res) => {
                 name: rawName,
                 phone: rawPhone,
                 reason: `Invalid phone number format (${digitCount} digits detected; must contain 7-15 digits)`,
+                rawRow: row,
               });
               continue;
             }
@@ -720,6 +738,7 @@ export const bulkUploadLeads = async (req, res) => {
                   name: rawName,
                   phone: rawPhone,
                   reason: `Invalid email address format: "${rawEmail}"`,
+                  rawRow: row,
                 });
                 continue;
               }
@@ -733,6 +752,7 @@ export const bulkUploadLeads = async (req, res) => {
                 name: rawName,
                 phone: rawPhone,
                 reason: `Skipped: Plan limit of ${planLimit} total leads reached for your account.`,
+                rawRow: row,
               });
               continue;
             }
@@ -808,6 +828,7 @@ export const bulkUploadLeads = async (req, res) => {
               priority,
               notes: rawNotes,
               statusId: defaultStatus?._id || null,
+              assignedTo: targetAssignedTo,
               customFieldsData: customData,
             });
 
@@ -817,7 +838,7 @@ export const bulkUploadLeads = async (req, res) => {
               performedBy: req.user._id,
               type: 'created',
               title: 'Bulk Imported Lead',
-              note: `Imported via CSV batch upload (Source: ${source})`,
+              note: `Imported via CSV batch upload (Source: ${source})${assignedStaffDoc ? ` (Assigned to ${assignedStaffDoc.name})` : ''}`,
             });
 
             importedCount++;
@@ -976,3 +997,32 @@ export const deleteLead = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Bulk Delete Leads
+// @route   POST /api/leads/bulk-delete
+// @access  Private (Admin Only)
+export const bulkDeleteLeads = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { leadIds } = req.body;
+
+    if (!Array.isArray(leadIds) || leadIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of lead IDs to delete' });
+    }
+
+    // Delete associated ActivityLogs
+    await ActivityLog.deleteMany({ leadId: { $in: leadIds }, tenantId });
+
+    // Delete leads belonging to this tenant
+    const result = await Lead.deleteMany({ _id: { $in: leadIds }, tenantId });
+
+    return res.json({
+      success: true,
+      message: `Successfully deleted ${result.deletedCount} leads`,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+

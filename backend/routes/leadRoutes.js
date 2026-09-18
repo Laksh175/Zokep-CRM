@@ -15,6 +15,7 @@ import {
   exportLeadsCSV,
   getSampleLeadCSV,
   deleteLead,
+  bulkDeleteLeads,
 } from '../controllers/leadController.js';
 import { protect } from '../middleware/authMiddleware.js';
 import { authorize } from '../middleware/roleMiddleware.js';
@@ -64,6 +65,7 @@ router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
 router.put('/:id/reassign', authorize('admin'), reassignLead);
 
 // Base resource operations
+router.post('/bulk-delete', authorize('admin'), bulkDeleteLeads);
 router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
 router.put('/:id', authorize('admin', 'staff'), updateLead);
 router.delete('/:id', authorize('admin'), deleteLead);
