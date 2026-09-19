@@ -535,17 +535,29 @@ export const LeadManagementPage = () => {
 
   const handleExportCSV = async () => {
     try {
-      const blob = await api.get('/leads/export-csv');
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const params = {};
+      if (search && search.trim()) params.search = search.trim();
+      if (statusFilter) params.statusId = statusFilter;
+      if (assigneeFilter) params.assignedTo = assigneeFilter;
+      if (sourceFilter) params.source = sourceFilter;
+      if (priorityFilter) params.priority = priorityFilter;
+      if (selectedLeadIds.length > 0 && !selectAllAcrossPages) {
+        params.leadIds = selectedLeadIds.join(',');
+      }
+
+      const blob = await api.get('/leads/export-csv', params);
+      const url = window.URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `zokep_leads_${Date.now()}.csv`);
+      const fileSuffix = sourceFilter ? `_${sourceFilter}` : '';
+      link.setAttribute('download', `zokep_leads${fileSuffix}_${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      success('CSV exported successfully!');
+      window.URL.revokeObjectURL(url);
+      success('Filtered CSV exported successfully!');
     } catch (err) {
-      error('Failed to export CSV');
+      error(err.message || 'Failed to export CSV');
     }
   };
 

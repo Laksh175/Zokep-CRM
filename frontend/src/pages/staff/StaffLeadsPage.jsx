@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Plus,
   Search,
+  Download,
   MessageSquare,
   Mail,
   UserCheck,
@@ -291,16 +292,46 @@ export const StaffLeadsPage = () => {
     }
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const params = {};
+      if (search && search.trim()) params.search = search.trim();
+      if (statusFilter) params.statusId = statusFilter;
+      if (sourceFilter) params.source = sourceFilter;
+      if (priorityFilter) params.priority = priorityFilter;
+
+      const blob = await api.get('/leads/export-csv', params);
+      const url = window.URL.createObjectURL(blob instanceof Blob ? blob : new Blob([blob]));
+      const link = document.createElement('a');
+      link.href = url;
+      const fileSuffix = sourceFilter ? `_${sourceFilter}` : '';
+      link.setAttribute('download', `my_assigned_leads${fileSuffix}_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      success('Filtered CSV exported successfully!');
+    } catch (err) {
+      error(err.message || 'Failed to export CSV');
+    }
+  };
+
   return (
     <div>
       <Header
         title="My Assigned Leads"
         subtitle="Manage and follow up on your assigned leads with 1-click WhatsApp and Email tools."
         actions={
-          <button className="btn btn-primary" onClick={openAddModal}>
-            <Plus size={16} />
-            Add New Lead
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button className="btn btn-secondary" onClick={handleExportCSV}>
+              <Download size={16} />
+              Export CSV
+            </button>
+            <button className="btn btn-primary" onClick={openAddModal}>
+              <Plus size={16} />
+              Add New Lead
+            </button>
+          </div>
         }
       />
 

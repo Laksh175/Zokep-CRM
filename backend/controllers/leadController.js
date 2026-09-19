@@ -10,6 +10,100 @@ import User from '../models/User.js';
 import Subscription from '../models/Subscription.js';
 import { formatDate } from '../utils/dateFormatter.js';
 
+/**
+ * Helper function to build MongoDB query for filtering leads across list, pagination & CSV export
+ */
+export const buildLeadFilterQuery = (tenantId, user, queryParams = {}) => {
+  const {
+    search,
+    statusId,
+    assignedTo,
+    source,
+    priority,
+    isConverted,
+    dateFrom,
+    dateTo,
+    followupFilter,
+    leadIds,
+  } = queryParams;
+
+  const query = { tenantId };
+
+  // Staff can only view/export their own assigned leads
+  if (user && user.role === 'staff') {
+    query.assignedTo = user._id;
+  } else if (assignedTo) {
+    if (assignedTo === 'unassigned') {
+      query.assignedTo = null;
+    } else {
+      query.assignedTo = assignedTo;
+    }
+  }
+
+  if (statusId) query.statusId = statusId;
+  if (source) query.source = source;
+  if (priority) query.priority = priority;
+
+  if (isConverted !== undefined && isConverted !== '') {
+    query.isConverted = isConverted === 'true' || isConverted === true;
+  }
+
+  // Follow-up quick filters (today, overdue, upcoming)
+  if (followupFilter) {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+
+    if (followupFilter === 'today') {
+      query.nextFollowupDate = { $gte: startOfToday, $lte: endOfToday };
+      query.isConverted = false;
+    } else if (followupFilter === 'overdue') {
+      query.nextFollowupDate = { $lt: startOfToday };
+      query.isConverted = false;
+    } else if (followupFilter === 'upcoming') {
+      const nextWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
+      nextWeek.setHours(23, 59, 59, 999);
+      query.nextFollowupDate = { $gt: endOfToday, $lte: nextWeek };
+      query.isConverted = false;
+    }
+  }
+
+  if (dateFrom || dateTo) {
+    query.createdAt = {};
+    if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      query.createdAt.$lte = end;
+    }
+  }
+
+  if (search && typeof search === 'string' && search.trim()) {
+    const term = search.trim();
+    query.$or = [
+      { name: { $regex: term, $options: 'i' } },
+      { phone: { $regex: term, $options: 'i' } },
+      { email: { $regex: term, $options: 'i' } },
+      { company: { $regex: term, $options: 'i' } },
+    ];
+  }
+
+  // If specific lead IDs are passed (for bulk selected lead exports)
+  if (leadIds) {
+    const ids = Array.isArray(leadIds)
+      ? leadIds
+      : String(leadIds)
+          .split(',')
+          .map((id) => id.trim())
+          .filter((id) => mongoose.Types.ObjectId.isValid(id));
+    if (ids.length > 0) {
+      query._id = { $in: ids };
+    }
+  }
+
+  return query;
+};
+
 // @desc    Get all leads with advanced filtering & role scoping
 // @route   GET /api/leads
 // @access  Private (Admin & Staff)
@@ -17,80 +111,13 @@ export const getLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const {
-      search,
-      statusId,
-      assignedTo,
-      source,
-      priority,
-      isConverted,
-      dateFrom,
-      dateTo,
-      followupFilter,
       page = 1,
       limit = 50,
       sortBy = 'createdAt',
       sortOrder = 'desc',
     } = req.query;
 
-    const query = { tenantId };
-
-    // Staff can only view their own assigned leads
-    if (req.user.role === 'staff') {
-      query.assignedTo = req.user._id;
-    } else if (assignedTo) {
-      if (assignedTo === 'unassigned') {
-        query.assignedTo = null;
-      } else {
-        query.assignedTo = assignedTo;
-      }
-    }
-
-    if (statusId) query.statusId = statusId;
-    if (source) query.source = source;
-    if (priority) query.priority = priority;
-
-    if (isConverted !== undefined) {
-      query.isConverted = isConverted === 'true';
-    }
-
-    // Follow-up quick filters (today, overdue, upcoming)
-    if (followupFilter) {
-      const now = new Date();
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-
-      if (followupFilter === 'today') {
-        query.nextFollowupDate = { $gte: startOfToday, $lte: endOfToday };
-        query.isConverted = false;
-      } else if (followupFilter === 'overdue') {
-        query.nextFollowupDate = { $lt: startOfToday };
-        query.isConverted = false;
-      } else if (followupFilter === 'upcoming') {
-        const nextWeek = new Date(startOfToday.getTime() + 7 * 24 * 60 * 60 * 1000);
-        nextWeek.setHours(23, 59, 59, 999);
-        query.nextFollowupDate = { $gt: endOfToday, $lte: nextWeek };
-        query.isConverted = false;
-      }
-    }
-
-    if (dateFrom || dateTo) {
-      query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) {
-        const end = new Date(dateTo);
-        end.setHours(23, 59, 59, 999);
-        query.createdAt.$lte = end;
-      }
-    }
-
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { company: { $regex: search, $options: 'i' } },
-      ];
-    }
+    const query = buildLeadFilterQuery(tenantId, req.user, req.query);
 
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 50);
@@ -894,23 +921,27 @@ export const bulkUploadLeads = async (req, res) => {
   }
 };
 
-// @desc    Export Leads to CSV
+// @desc    Export Filtered Leads to CSV
 // @route   GET /api/leads/export-csv
 // @access  Private (Admin & Staff)
 export const exportLeadsCSV = async (req, res) => {
   try {
     const tenantId = req.tenantId;
-    const query = { tenantId };
+    const {
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = req.query;
 
-    if (req.user.role === 'staff') {
-      query.assignedTo = req.user._id;
-    }
+    const query = buildLeadFilterQuery(tenantId, req.user, req.query);
 
-    const leads = await Lead.find(query)
-      .populate('statusId', 'name')
-      .populate('assignedTo', 'name email');
-
-    const customFields = await CustomField.find({ tenantId });
+    const [leads, customFields] = await Promise.all([
+      Lead.find(query)
+        .populate('statusId', 'name')
+        .populate('assignedTo', 'name email')
+        .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+        .lean(),
+      CustomField.find({ tenantId }).lean(),
+    ]);
 
     const flatData = leads.map((l) => {
       const row = {
@@ -920,11 +951,13 @@ export const exportLeadsCSV = async (req, res) => {
         Email: l.email || '',
         Company: l.company || '',
         'Deal Value': l.dealValue || 0,
+        Priority: l.priority ? l.priority.charAt(0).toUpperCase() + l.priority.slice(1) : 'Medium',
         Status: l.statusId?.name || 'New',
         'Assigned To': l.assignedTo?.name || 'Unassigned',
-        Source: l.source,
+        Source: l.source || '',
         'Is Converted': l.isConverted ? 'Yes' : 'No',
         'Converted Amount': l.convertedDealAmount || 0,
+        'Converted Date': l.convertedAt ? formatDate(l.convertedAt) : '',
         'Next Followup': l.nextFollowupDate ? formatDate(l.nextFollowupDate) : '',
         'Created Date': formatDate(l.createdAt),
         Notes: l.notes || '',
@@ -932,19 +965,40 @@ export const exportLeadsCSV = async (req, res) => {
 
       // Append custom fields
       for (const cf of customFields) {
-        row[cf.fieldLabel] = l.customFieldsData?.[cf.fieldName] || '';
+        row[cf.fieldLabel || cf.fieldName] = l.customFieldsData?.[cf.fieldName] || '';
       }
 
       return row;
     });
 
-    const json2csvParser = new Json2CsvParser();
+    const fields = [
+      'Lead ID',
+      'Name',
+      'Phone',
+      'Email',
+      'Company',
+      'Deal Value',
+      'Priority',
+      'Status',
+      'Assigned To',
+      'Source',
+      'Is Converted',
+      'Converted Amount',
+      'Converted Date',
+      'Next Followup',
+      'Created Date',
+      'Notes',
+      ...customFields.map((cf) => cf.fieldLabel || cf.fieldName),
+    ];
+
+    const json2csvParser = new Json2CsvParser({ fields });
     const csvData = json2csvParser.parse(flatData);
 
     res.header('Content-Type', 'text/csv');
     res.attachment(`zokep_crm_leads_${Date.now()}.csv`);
     return res.send(csvData);
   } catch (error) {
+    console.error('Export Leads CSV Error:', error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
