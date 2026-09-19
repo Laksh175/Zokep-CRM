@@ -423,22 +423,31 @@ export const LeadManagementPage = () => {
         ? {
             selectAllMatching: true,
             excludeLeadIds: deselectedLeadIds,
-            search,
-            statusId: statusFilter,
-            assignedTo: assigneeFilter,
-            source: sourceFilter,
-            priority: priorityFilter,
+            search: search?.trim() ? search.trim() : undefined,
+            statusId: statusFilter ? statusFilter : undefined,
+            assignedTo: assigneeFilter ? assigneeFilter : undefined,
+            source: sourceFilter ? sourceFilter : undefined,
+            priority: priorityFilter ? priorityFilter : undefined,
           }
         : { leadIds: selectedLeadIds };
 
-      let res;
+      let res = null;
+      let lastErr = null;
+
+      // Resilient execution: Try POST /leads/bulk-delete -> DELETE /leads/bulk-delete -> DELETE /leads
       try {
         res = await api.post('/leads/bulk-delete', payload);
-      } catch (errPost) {
-        if (errPost?.status === 404 || errPost?.message?.includes('Cannot POST') || errPost?.message?.includes('404')) {
+      } catch (e1) {
+        lastErr = e1;
+        try {
           res = await api.delete('/leads/bulk-delete', payload);
-        } else {
-          throw errPost;
+        } catch (e2) {
+          lastErr = e2;
+          try {
+            res = await api.delete('/leads', payload);
+          } catch (e3) {
+            lastErr = e3;
+          }
         }
       }
 
@@ -450,6 +459,8 @@ export const LeadManagementPage = () => {
         setBulkDeleteModalOpen(false);
         setPage(1);
         fetchLeads(1, limit);
+      } else if (lastErr) {
+        throw lastErr;
       }
     } catch (err) {
       error(err.message || 'Failed to delete selected leads');

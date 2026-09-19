@@ -56,6 +56,7 @@ router.use(protect);
 // Static Collection Routes (must precede /:id)
 router.get('/', authorize('admin', 'staff'), getLeads);
 router.post('/', authorize('admin', 'staff'), checkActiveSubscription, createLead);
+router.delete('/', authorize('admin', 'staff'), bulkDeleteLeads);
 router.post('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
 router.delete('/bulk-delete', authorize('admin', 'staff'), bulkDeleteLeads);
 router.post('/bulk-upload', authorize('admin'), checkActiveSubscription, upload.single('file'), bulkUploadLeads);
