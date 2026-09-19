@@ -882,6 +882,7 @@ export const bulkUploadLeads = async (req, res) => {
               statusId: defaultStatus?._id || null,
               assignedTo: targetAssignedTo,
               customFieldsData: customData,
+              lastFollowupNote: rawNotes || '',
             });
 
             await ActivityLog.create({
@@ -950,6 +951,8 @@ export const exportLeadsCSV = async (req, res) => {
         Phone: l.phone,
         Email: l.email || '',
         Company: l.company || '',
+        'Requirement Overview': l.notes || '',
+        'Last Followup Remark': l.lastFollowupNote || '',
         'Deal Value': l.dealValue || 0,
         Priority: l.priority ? l.priority.charAt(0).toUpperCase() + l.priority.slice(1) : 'Medium',
         Status: l.statusId?.name || 'New',
@@ -977,6 +980,8 @@ export const exportLeadsCSV = async (req, res) => {
       'Phone',
       'Email',
       'Company',
+      'Requirement Overview',
+      'Last Followup Remark',
       'Deal Value',
       'Priority',
       'Status',

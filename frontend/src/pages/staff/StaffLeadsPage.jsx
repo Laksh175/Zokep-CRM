@@ -416,6 +416,8 @@ export const StaffLeadsPage = () => {
                     <tr>
                       <th>Lead Contact</th>
                       <th>Company</th>
+                      <th>Requirement Overview</th>
+                      <th>Last Follow-up Remark</th>
                       <th>Deal Value</th>
                       <th>Status</th>
                       <th>Lead Source</th>
@@ -442,6 +444,58 @@ export const StaffLeadsPage = () => {
                           </div>
                         </td>
                         <td>{lead.company || '-'}</td>
+                        <td>
+                          {lead.notes ? (
+                            <div
+                              style={{
+                                maxWidth: '200px',
+                                minWidth: '140px',
+                                fontSize: '12px',
+                                color: 'var(--text-secondary)',
+                                lineHeight: '1.4',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                              }}
+                              title={lead.notes}
+                            >
+                              {lead.notes}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
+                        <td>
+                          {lead.lastFollowupNote ? (
+                            <div
+                              style={{
+                                maxWidth: '200px',
+                                minWidth: '140px',
+                                fontSize: '12px',
+                                color: '#002244',
+                                backgroundColor: 'rgba(0, 56, 101, 0.04)',
+                                border: '1px solid rgba(0, 56, 101, 0.12)',
+                                borderRadius: '6px',
+                                padding: '4px 8px',
+                                lineHeight: '1.35',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                wordBreak: 'break-word',
+                              }}
+                              title={lead.lastFollowupNote}
+                            >
+                              {lead.lastFollowupNote}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                          )}
+                        </td>
                         <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
                           ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
                         </td>
