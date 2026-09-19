@@ -1,5 +1,6 @@
 import fs from 'fs';
 import csv from 'csv-parser';
+import mongoose from 'mongoose';
 import { Parser as Json2CsvParser } from 'json2csv';
 import Lead from '../models/Lead.js';
 import LeadStatus from '../models/LeadStatus.js';
@@ -127,6 +128,10 @@ export const getLeadById = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
 
     const lead = await Lead.findOne({ _id: id, tenantId })
       .populate('statusId', 'name color isConvertedState isLostState')
@@ -272,6 +277,10 @@ export const updateLead = async (req, res) => {
       notes,
     } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
+
     const lead = await Lead.findOne({ _id: id, tenantId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
@@ -363,6 +372,10 @@ export const updateLeadStatusDirectly = async (req, res) => {
     const { id } = req.params;
     const { statusId } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
+
     if (!statusId) {
       return res.status(400).json({ success: false, message: 'statusId is required' });
     }
@@ -421,6 +434,10 @@ export const addFollowupAndUpdateStatus = async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
     const { statusId, note, nextFollowupDate, activityType = 'note' } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
 
     const lead = await Lead.findOne({ _id: id, tenantId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
@@ -494,6 +511,10 @@ export const convertLeadToCustomer = async (req, res) => {
     const { id } = req.params;
     const { dealAmount, note } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
+
     const lead = await Lead.findOne({ _id: id, tenantId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
 
@@ -539,6 +560,10 @@ export const reassignLead = async (req, res) => {
     const tenantId = req.tenantId;
     const { id } = req.params;
     const targetAssignee = req.body.assignedTo || req.body.assignedToId || null;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
 
     const lead = await Lead.findOne({ _id: id, tenantId });
     if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
@@ -983,11 +1008,19 @@ export const getSampleLeadCSV = async (req, res) => {
 
 // @desc    Delete single lead
 // @route   DELETE /api/leads/:id
-// @access  Private (Admin Only)
+// @access  Private (Admin & Staff)
 export const deleteLead = async (req, res) => {
   try {
     const tenantId = req.tenantId;
     const { id } = req.params;
+
+    if (id === 'bulk-delete' || id === 'bulk') {
+      return bulkDeleteLeads(req, res);
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
 
     await ActivityLog.deleteMany({ leadId: id, tenantId });
     await Lead.findOneAndDelete({ _id: id, tenantId });
@@ -1000,7 +1033,7 @@ export const deleteLead = async (req, res) => {
 
 // @desc    Bulk Delete Leads (Specific IDs or All Matching Active Filters)
 // @route   POST /api/leads/bulk-delete
-// @access  Private (Admin Only)
+// @access  Private (Admin & Staff)
 export const bulkDeleteLeads = async (req, res) => {
   try {
     const tenantId = req.tenantId;
@@ -1014,7 +1047,7 @@ export const bulkDeleteLeads = async (req, res) => {
       source,
       priority,
       isConverted,
-    } = req.body;
+    } = req.body || {};
 
     if (selectAllMatching) {
       const query = { tenantId };
@@ -1024,12 +1057,12 @@ export const bulkDeleteLeads = async (req, res) => {
       } else if (assignedTo) {
         if (assignedTo === 'unassigned') {
           query.assignedTo = null;
-        } else {
+        } else if (mongoose.Types.ObjectId.isValid(assignedTo)) {
           query.assignedTo = assignedTo;
         }
       }
 
-      if (statusId) query.statusId = statusId;
+      if (statusId && mongoose.Types.ObjectId.isValid(statusId)) query.statusId = statusId;
       if (source) query.source = source;
       if (priority) query.priority = priority;
       if (isConverted !== undefined) {
@@ -1046,7 +1079,10 @@ export const bulkDeleteLeads = async (req, res) => {
       }
 
       if (Array.isArray(excludeLeadIds) && excludeLeadIds.length > 0) {
-        query._id = { $nin: excludeLeadIds };
+        const validExcludes = excludeLeadIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+        if (validExcludes.length > 0) {
+          query._id = { $nin: validExcludes };
+        }
       }
 
       // Find matching lead IDs first to delete associated activity logs
@@ -1071,13 +1107,18 @@ export const bulkDeleteLeads = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide an array of lead IDs to delete' });
     }
 
-    const deleteQuery = { _id: { $in: leadIds }, tenantId };
+    const validLeadIds = leadIds.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    if (validLeadIds.length === 0) {
+      return res.status(400).json({ success: false, message: 'No valid lead IDs provided to delete' });
+    }
+
+    const deleteQuery = { _id: { $in: validLeadIds }, tenantId };
     if (req.user.role === 'staff') {
       deleteQuery.assignedTo = req.user._id;
     }
 
     // Delete associated ActivityLogs
-    await ActivityLog.deleteMany({ leadId: { $in: leadIds }, tenantId });
+    await ActivityLog.deleteMany({ leadId: { $in: validLeadIds }, tenantId });
 
     // Delete leads belonging to this tenant
     const result = await Lead.deleteMany(deleteQuery);
