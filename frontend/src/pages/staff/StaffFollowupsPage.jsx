@@ -16,9 +16,11 @@ import {
   RefreshCw,
   Loader2,
   X,
+  Edit3,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
+import EditFollowupModal from '../../components/EditFollowupModal';
 import Badge from '../../components/Badge';
 import CustomSelect from '../../components/CustomSelect';
 import WhatsAppModal from '../../components/WhatsAppModal';
@@ -59,6 +61,22 @@ export const StaffFollowupsPage = () => {
   const [newNextFollowup, setNewNextFollowup] = useState('');
   const [followupNote, setFollowupNote] = useState('');
   const [savingFollowup, setSavingFollowup] = useState(false);
+
+  // Edit Follow-up Modal
+  const [editFollowupModalOpen, setEditFollowupModalOpen] = useState(false);
+  const [editingFollowupLead, setEditingFollowupLead] = useState(null);
+
+  const openEditFollowupModal = (lead) => {
+    setEditingFollowupLead(lead);
+    setEditFollowupModalOpen(true);
+  };
+
+  const handleFollowupUpdated = (updatedLead) => {
+    if (!updatedLead) return;
+    setLeads((prev) =>
+      prev.map((ld) => (ld._id === updatedLead._id ? updatedLead : ld))
+    );
+  };
 
   // Quick WhatsApp / Email modals
   const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
@@ -433,32 +451,45 @@ export const StaffFollowupsPage = () => {
                             )}
                           </td>
                           <td>
-                            {lead.lastFollowupNote ? (
-                              <div
-                                style={{
-                                  maxWidth: '190px',
-                                  minWidth: '130px',
-                                  fontSize: '12px',
-                                  color: '#002244',
-                                  backgroundColor: 'rgba(0, 56, 101, 0.04)',
-                                  border: '1px solid rgba(0, 56, 101, 0.12)',
-                                  borderRadius: '6px',
-                                  padding: '4px 8px',
-                                  lineHeight: '1.35',
-                                  display: '-webkit-box',
-                                  WebkitLineClamp: 2,
-                                  WebkitBoxOrient: 'vertical',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  wordBreak: 'break-word',
-                                }}
-                                title={lead.lastFollowupNote}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {lead.lastFollowupNote ? (
+                                <div
+                                  style={{
+                                    maxWidth: '180px',
+                                    minWidth: '120px',
+                                    fontSize: '12px',
+                                    color: '#002244',
+                                    backgroundColor: 'rgba(0, 56, 101, 0.04)',
+                                    border: '1px solid rgba(0, 56, 101, 0.12)',
+                                    borderRadius: '6px',
+                                    padding: '4px 8px',
+                                    lineHeight: '1.35',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    wordBreak: 'break-word',
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() => openEditFollowupModal(lead)}
+                                  title={`Click to edit follow-up: "${lead.lastFollowupNote}"`}
+                                >
+                                  {lead.lastFollowupNote}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => openEditFollowupModal(lead)}
+                                className="btn-icon btn-secondary"
+                                style={{ width: '24px', height: '24px', padding: 0, flexShrink: 0 }}
+                                title="Edit Follow-up Note & Date"
                               >
-                                {lead.lastFollowupNote}
-                              </div>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>
-                            )}
+                                <Edit3 size={12} color="var(--primary-600)" />
+                              </button>
+                            </div>
                           </td>
                           <td style={{ fontWeight: 700, color: lead.isConverted ? '#10b981' : 'var(--text-primary)' }}>
                             ₹{(lead.dealValue || 0).toLocaleString('en-IN')}
@@ -541,6 +572,15 @@ export const StaffFollowupsPage = () => {
                               >
                                 <Phone size={14} color="var(--primary-600)" />
                               </a>
+
+                              {/* Edit Follow-up */}
+                              <button
+                                onClick={() => openEditFollowupModal(lead)}
+                                className="btn btn-secondary btn-action"
+                                title="Edit Follow-up Note & Date"
+                              >
+                                <Edit3 size={14} color="#0284c7" />
+                              </button>
 
                               {/* Reschedule / Log Followup */}
                               <button
@@ -738,6 +778,20 @@ export const StaffFollowupsPage = () => {
           }}
           lead={quickActionLead}
           onEmailSuccess={() => fetchFollowupLeads(page, limit, activeTab)}
+        />
+      )}
+
+      {/* EDIT FOLLOW-UP MODAL */}
+      {editingFollowupLead && (
+        <EditFollowupModal
+          isOpen={editFollowupModalOpen}
+          onClose={() => {
+            setEditFollowupModalOpen(false);
+            setEditingFollowupLead(null);
+          }}
+          lead={editingFollowupLead}
+          statuses={statuses}
+          onSuccess={handleFollowupUpdated}
         />
       )}
     </div>

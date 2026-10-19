@@ -9,6 +9,9 @@ import {
   updateLead,
   updateLeadStatusDirectly,
   addFollowupAndUpdateStatus,
+  updateFollowup,
+  updateActivityLog,
+  deleteActivityLog,
   convertLeadToCustomer,
   reassignLead,
   bulkUploadLeads,
@@ -69,6 +72,9 @@ router.put('/:id', authorize('admin', 'staff'), updateLead);
 router.delete('/:id', authorize('admin', 'staff'), deleteLead);
 router.put('/:id/status', authorize('admin', 'staff'), updateLeadStatusDirectly);
 router.post('/:id/followup', authorize('admin', 'staff'), addFollowupAndUpdateStatus);
+router.put('/:id/followup', authorize('admin', 'staff'), updateFollowup);
+router.put('/:id/activities/:activityId', authorize('admin', 'staff'), updateActivityLog);
+router.delete('/:id/activities/:activityId', authorize('admin', 'staff'), deleteActivityLog);
 router.post('/:id/convert', authorize('admin', 'staff'), convertLeadToCustomer);
 router.put('/:id/reassign', authorize('admin'), reassignLead);
 

@@ -583,6 +583,204 @@ export const addFollowupAndUpdateStatus = async (req, res) => {
   }
 };
 
+// @desc    Edit Existing Follow-up Note & Next Follow-up Date
+// @route   PUT /api/leads/:id/followup
+// @access  Private (Admin & Staff)
+export const updateFollowup = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id } = req.params;
+    const { note, nextFollowupDate, statusId, activityId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ success: false, message: 'Lead not found' });
+    }
+
+    const lead = await Lead.findOne({ _id: id, tenantId });
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    if (req.user.role === 'staff' && String(lead.assignedTo) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this lead' });
+    }
+
+    // Optional status update
+    if (statusId && String(lead.statusId) !== String(statusId)) {
+      const newStatusDoc = await LeadStatus.findById(statusId);
+      lead.statusId = statusId;
+      if (newStatusDoc?.isConvertedState) {
+        lead.isConverted = true;
+        lead.convertedAt = new Date();
+        lead.convertedDealAmount = lead.dealValue || 0;
+      }
+    }
+
+    if (nextFollowupDate !== undefined) {
+      lead.nextFollowupDate = nextFollowupDate ? new Date(nextFollowupDate) : null;
+    }
+
+    if (note !== undefined) {
+      lead.lastFollowupNote = note;
+    }
+
+    await lead.save();
+
+    // Sync or update associated activity log
+    let updatedActivity = null;
+    if (activityId && mongoose.Types.ObjectId.isValid(activityId)) {
+      updatedActivity = await ActivityLog.findOne({ _id: activityId, leadId: lead._id, tenantId });
+      if (updatedActivity) {
+        if (note !== undefined) updatedActivity.note = note;
+        if (nextFollowupDate !== undefined) updatedActivity.nextFollowupDate = lead.nextFollowupDate;
+        await updatedActivity.save();
+      }
+    } else {
+      // Find the most recent activity log for this lead to update the note
+      const latestActivity = await ActivityLog.findOne({
+        leadId: lead._id,
+        tenantId,
+      }).sort({ createdAt: -1 });
+
+      if (latestActivity) {
+        if (note !== undefined) latestActivity.note = note;
+        if (nextFollowupDate !== undefined) latestActivity.nextFollowupDate = lead.nextFollowupDate;
+        await latestActivity.save();
+        updatedActivity = latestActivity;
+      } else if (note) {
+        // If no prior activity existed, log an activity
+        updatedActivity = await ActivityLog.create({
+          tenantId,
+          leadId: lead._id,
+          performedBy: req.user._id,
+          type: 'note',
+          title: 'Follow-up Note Updated',
+          note,
+          nextFollowupDate: lead.nextFollowupDate,
+        });
+      }
+    }
+
+    const populated = await Lead.findById(lead._id)
+      .populate('statusId', 'name color isConvertedState isLostState')
+      .populate('assignedTo', 'name email');
+
+    return res.json({
+      success: true,
+      message: 'Follow-up updated successfully',
+      data: {
+        lead: populated,
+        activity: updatedActivity,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Edit a specific Activity Log (Timeline Entry)
+// @route   PUT /api/leads/:id/activities/:activityId
+// @access  Private (Admin & Staff)
+export const updateActivityLog = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id, activityId } = req.params;
+    const { note, nextFollowupDate } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(activityId)) {
+      return res.status(404).json({ success: false, message: 'Invalid lead or activity ID' });
+    }
+
+    const lead = await Lead.findOne({ _id: id, tenantId });
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    if (req.user.role === 'staff' && String(lead.assignedTo) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this lead' });
+    }
+
+    const activity = await ActivityLog.findOne({ _id: activityId, leadId: lead._id, tenantId });
+    if (!activity) {
+      return res.status(404).json({ success: false, message: 'Activity log not found' });
+    }
+
+    if (note !== undefined) {
+      activity.note = note;
+    }
+    if (nextFollowupDate !== undefined) {
+      activity.nextFollowupDate = nextFollowupDate ? new Date(nextFollowupDate) : null;
+    }
+    await activity.save();
+
+    // Check if this activity is the latest activity for the lead to keep lead.lastFollowupNote in sync
+    const latestActivity = await ActivityLog.findOne({ leadId: lead._id, tenantId }).sort({ createdAt: -1 });
+    if (latestActivity && String(latestActivity._id) === String(activity._id)) {
+      if (note !== undefined) lead.lastFollowupNote = note;
+      if (nextFollowupDate !== undefined) lead.nextFollowupDate = activity.nextFollowupDate;
+      await lead.save();
+    }
+
+    const populated = await Lead.findById(lead._id)
+      .populate('statusId', 'name color isConvertedState isLostState')
+      .populate('assignedTo', 'name email');
+
+    return res.json({
+      success: true,
+      message: 'Activity note updated successfully',
+      data: {
+        lead: populated,
+        activity,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @desc    Delete a specific Activity Log (Timeline Entry)
+// @route   DELETE /api/leads/:id/activities/:activityId
+// @access  Private (Admin & Staff)
+export const deleteActivityLog = async (req, res) => {
+  try {
+    const tenantId = req.tenantId;
+    const { id, activityId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id) || !mongoose.Types.ObjectId.isValid(activityId)) {
+      return res.status(404).json({ success: false, message: 'Invalid lead or activity ID' });
+    }
+
+    const lead = await Lead.findOne({ _id: id, tenantId });
+    if (!lead) return res.status(404).json({ success: false, message: 'Lead not found' });
+
+    if (req.user.role === 'staff' && String(lead.assignedTo) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Not authorized to update this lead' });
+    }
+
+    await ActivityLog.deleteOne({ _id: activityId, leadId: lead._id, tenantId });
+
+    // Sync lead's lastFollowupNote with the newest remaining activity that has a note
+    const latestWithNote = await ActivityLog.findOne({
+      leadId: lead._id,
+      tenantId,
+      note: { $exists: true, $ne: '' },
+    }).sort({ createdAt: -1 });
+
+    lead.lastFollowupNote = latestWithNote ? latestWithNote.note : '';
+    await lead.save();
+
+    const populated = await Lead.findById(lead._id)
+      .populate('statusId', 'name color isConvertedState isLostState')
+      .populate('assignedTo', 'name email');
+
+    return res.json({
+      success: true,
+      message: 'Activity log removed successfully',
+      data: {
+        lead: populated,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @desc    Convert Lead to Customer
 // @route   POST /api/leads/:id/convert
 // @access  Private (Admin & Staff)
