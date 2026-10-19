@@ -31,6 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  X,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -65,6 +66,8 @@ export const LeadManagementPage = () => {
 
   // Filters
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
@@ -122,13 +125,28 @@ export const LeadManagementPage = () => {
     fetchMetadata();
   }, []);
 
+  // Immediate debounced search as user types
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     setPage(1);
     setSelectedLeadIds([]);
     setDeselectedLeadIds([]);
     setSelectAllAcrossPages(false);
-    fetchLeads(1, limit);
-  }, [statusFilter, assigneeFilter, sourceFilter, priorityFilter]);
+    fetchLeads(1, limit, debouncedSearch);
+  }, [debouncedSearch, statusFilter, assigneeFilter, sourceFilter, priorityFilter]);
 
   const fetchMetadata = async () => {
     try {
@@ -145,11 +163,11 @@ export const LeadManagementPage = () => {
     }
   };
 
-  const fetchLeads = async (targetPage = page, targetLimit = limit) => {
+  const fetchLeads = async (targetPage = page, targetLimit = limit, targetSearch = debouncedSearch) => {
     try {
       setLoading(true);
       const res = await api.get('/leads', {
-        search,
+        search: targetSearch !== undefined ? targetSearch : debouncedSearch,
         statusId: statusFilter,
         assignedTo: assigneeFilter,
         source: sourceFilter,
@@ -172,20 +190,32 @@ export const LeadManagementPage = () => {
       setLeads([]);
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages && newPage !== page) {
       setPage(newPage);
-      fetchLeads(newPage, limit);
+      fetchLeads(newPage, limit, debouncedSearch);
     }
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (search === debouncedSearch) {
+      setPage(1);
+      fetchLeads(1, limit, search);
+    } else {
+      setDebouncedSearch(search);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
     setPage(1);
-    fetchLeads(1, limit);
+    fetchLeads(1, limit, '');
   };
 
   const openAddLeadModal = () => {
@@ -423,7 +453,7 @@ export const LeadManagementPage = () => {
         ? {
             selectAllMatching: true,
             excludeLeadIds: deselectedLeadIds,
-            search: search?.trim() ? search.trim() : undefined,
+            search: debouncedSearch?.trim() ? debouncedSearch.trim() : undefined,
             statusId: statusFilter ? statusFilter : undefined,
             assignedTo: assigneeFilter ? assigneeFilter : undefined,
             source: sourceFilter ? sourceFilter : undefined,
@@ -536,7 +566,7 @@ export const LeadManagementPage = () => {
   const handleExportCSV = async () => {
     try {
       const params = {};
-      if (search && search.trim()) params.search = search.trim();
+      if (debouncedSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (statusFilter) params.statusId = statusFilter;
       if (assigneeFilter) params.assignedTo = assigneeFilter;
       if (sourceFilter) params.source = sourceFilter;
@@ -752,17 +782,40 @@ export const LeadManagementPage = () => {
         {/* Filter & View Switcher Bar */}
         <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
-            <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '340px' }}>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search name, phone, email..."
+                placeholder="Search name, phone (+91), email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingRight: search ? '32px' : '12px' }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
-            <button type="submit" className="btn btn-secondary">
-              <Search size={16} />
+            <button type="submit" className="btn btn-secondary" title="Search leads">
+              {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
             </button>
           </form>
 

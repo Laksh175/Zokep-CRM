@@ -11,6 +11,65 @@ import Subscription from '../models/Subscription.js';
 import { formatDate } from '../utils/dateFormatter.js';
 
 /**
+ * Safely escape regex special characters
+ */
+export const escapeRegex = (string = '') => {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
+ * Build multi-field search conditions with smart phone number matching:
+ * - Escapes regex special characters (prevents '+91' / quantifier crash)
+ * - Matches formatted or unformatted phone numbers (e.g. +91 9876543210 vs 9876543210)
+ * - Handles country codes (+91, 91), leading zeros (0), spaces, dashes, etc.
+ */
+export const buildLeadSearchConditions = (searchStr) => {
+  if (!searchStr || typeof searchStr !== 'string' || !searchStr.trim()) {
+    return null;
+  }
+
+  const term = searchStr.trim();
+  const escaped = escapeRegex(term);
+  const orList = [
+    { name: { $regex: escaped, $options: 'i' } },
+    { email: { $regex: escaped, $options: 'i' } },
+    { company: { $regex: escaped, $options: 'i' } },
+    { phone: { $regex: escaped, $options: 'i' } },
+  ];
+
+  // Extract all digits from search query for comprehensive phone matching
+  const digits = term.replace(/\D/g, '');
+  if (digits.length >= 2) {
+    // 1. Flexible spacing/dashes/parentheses between digits
+    const flexPattern = digits.split('').join('[\\s\\-\\.\\(\\)]*');
+    orList.push({ phone: { $regex: flexPattern, $options: 'i' } });
+
+    // 2. If user included country code "91" (e.g. "+91 9876543210" or "919876543210"), match local number without 91
+    if (digits.startsWith('91') && digits.length > 2) {
+      const core = digits.slice(2);
+      if (core.length >= 2) {
+        orList.push({ phone: { $regex: core.split('').join('[\\s\\-\\.\\(\\)]*'), $options: 'i' } });
+      }
+    }
+
+    // 3. If user included leading "0" (e.g. "09876543210"), match without leading 0
+    if (digits.startsWith('0') && digits.length > 1) {
+      const core = digits.slice(1);
+      if (core.length >= 2) {
+        orList.push({ phone: { $regex: core.split('').join('[\\s\\-\\.\\(\\)]*'), $options: 'i' } });
+      }
+    }
+
+    // 4. If user entered 7 to 10 digits without country code, match numbers stored with "+91", "91", or "0" prefix
+    if (digits.length >= 7 && digits.length <= 10) {
+      orList.push({ phone: { $regex: '(?:\\+?91|0)?[\\s\\-\\.]*' + flexPattern, $options: 'i' } });
+    }
+  }
+
+  return orList;
+};
+
+/**
  * Helper function to build MongoDB query for filtering leads across list, pagination & CSV export
  */
 export const buildLeadFilterQuery = (tenantId, user, queryParams = {}) => {
@@ -78,14 +137,9 @@ export const buildLeadFilterQuery = (tenantId, user, queryParams = {}) => {
     }
   }
 
-  if (search && typeof search === 'string' && search.trim()) {
-    const term = search.trim();
-    query.$or = [
-      { name: { $regex: term, $options: 'i' } },
-      { phone: { $regex: term, $options: 'i' } },
-      { email: { $regex: term, $options: 'i' } },
-      { company: { $regex: term, $options: 'i' } },
-    ];
+  const searchConditions = buildLeadSearchConditions(search);
+  if (searchConditions) {
+    query.$or = searchConditions;
   }
 
   // If specific lead IDs are passed (for bulk selected lead exports)
@@ -1128,13 +1182,9 @@ export const bulkDeleteLeads = async (req, res) => {
         query.isConverted = isConverted === 'true' || isConverted === true;
       }
 
-      if (search) {
-        query.$or = [
-          { name: { $regex: search, $options: 'i' } },
-          { phone: { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } },
-          { company: { $regex: search, $options: 'i' } },
-        ];
+      const searchConditions = buildLeadSearchConditions(search);
+      if (searchConditions) {
+        query.$or = searchConditions;
       }
 
       if (Array.isArray(excludeLeadIds) && excludeLeadIds.length > 0) {

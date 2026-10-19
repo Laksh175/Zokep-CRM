@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Loader2,
+  X,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -44,6 +46,8 @@ export const StaffFollowupsPage = () => {
 
   // Search filter
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Counts summary for badge indicators
   const [tabCounts, setTabCounts] = useState({ today: 0, overdue: 0, upcoming: 0 });
@@ -65,10 +69,25 @@ export const StaffFollowupsPage = () => {
     fetchMetadata();
   }, []);
 
+  // Immediate debounced search as user types
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     setPage(1);
-    fetchFollowupLeads(1, limit, activeTab);
-  }, [activeTab]);
+    fetchFollowupLeads(1, limit, activeTab, debouncedSearch);
+  }, [activeTab, debouncedSearch]);
 
   const fetchMetadata = async () => {
     try {
@@ -81,13 +100,13 @@ export const StaffFollowupsPage = () => {
     }
   };
 
-  const fetchFollowupLeads = async (pageToFetch = page, limitToFetch = limit, tab = activeTab) => {
+  const fetchFollowupLeads = async (pageToFetch = page, limitToFetch = limit, tab = activeTab, searchToFetch = debouncedSearch) => {
     try {
       setLoading(true);
       const params = {
         page: pageToFetch,
         limit: limitToFetch,
-        search,
+        search: searchToFetch !== undefined ? searchToFetch : debouncedSearch,
       };
 
       if (tab !== 'all') {
@@ -115,13 +134,25 @@ export const StaffFollowupsPage = () => {
       setLeads([]);
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (search === debouncedSearch) {
+      setPage(1);
+      fetchFollowupLeads(1, limit, activeTab, search);
+    } else {
+      setDebouncedSearch(search);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
     setPage(1);
-    fetchFollowupLeads(1, limit, activeTab);
+    fetchFollowupLeads(1, limit, activeTab, '');
   };
 
   const openRescheduleModal = (lead) => {
@@ -287,18 +318,40 @@ export const StaffFollowupsPage = () => {
 
           {/* Quick Search */}
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ position: 'relative', width: '220px' }}>
+            <div style={{ position: 'relative', width: '240px' }}>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search follow-ups..."
+                placeholder="Search follow-ups (+91)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ padding: '7px 12px', fontSize: '13px' }}
+                style={{ padding: '7px 30px 7px 12px', fontSize: '13px' }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
-            <button type="submit" className="btn btn-secondary btn-sm">
-              <Search size={14} />
+            <button type="submit" className="btn btn-secondary btn-sm" title="Search">
+              {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
             </button>
           </form>
         </div>

@@ -11,6 +11,8 @@ import {
   XCircle,
   Plus,
   Receipt,
+  Loader2,
+  X,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Badge from '../../components/Badge';
@@ -28,6 +30,8 @@ export const AdminManagementPage = () => {
 
   // Filters
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [subFilter, setSubFilter] = useState('');
 
@@ -46,15 +50,30 @@ export const AdminManagementPage = () => {
   const [selectedInvoiceSubId, setSelectedInvoiceSubId] = useState(null);
   const [selectedInvoiceData, setSelectedInvoiceData] = useState(null);
 
+  // Immediate debounced search as user types
   useEffect(() => {
-    fetchAdmins();
-  }, [statusFilter, subFilter]);
+    if (!search) {
+      setDebouncedSearch('');
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
-  const fetchAdmins = async () => {
+  useEffect(() => {
+    fetchAdmins(debouncedSearch);
+  }, [debouncedSearch, statusFilter, subFilter]);
+
+  const fetchAdmins = async (searchToFetch = debouncedSearch) => {
     try {
       setLoading(true);
       const res = await api.get('/superadmin/admins', {
-        search,
+        search: searchToFetch !== undefined ? searchToFetch : debouncedSearch,
         status: statusFilter,
         subStatus: subFilter,
       });
@@ -65,12 +84,23 @@ export const AdminManagementPage = () => {
       error(err.message || 'Failed to fetch tenant admins');
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    fetchAdmins();
+    if (e) e.preventDefault();
+    if (search === debouncedSearch) {
+      fetchAdmins(search);
+    } else {
+      setDebouncedSearch(search);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    fetchAdmins('');
   };
 
   const openToggleStatusModal = (admin) => {
@@ -147,13 +177,36 @@ export const AdminManagementPage = () => {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search by company, name, email or phone..."
+                placeholder="Search by company, name, email or phone (+91)..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingRight: search ? '32px' : '12px' }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
-            <button type="submit" className="btn btn-secondary">
-              <Search size={16} />
+            <button type="submit" className="btn btn-secondary" title="Search accounts">
+              {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
               Search
             </button>
           </form>

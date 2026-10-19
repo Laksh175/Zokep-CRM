@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Loader2,
+  X,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -46,6 +48,8 @@ export const StaffLeadsPage = () => {
 
   // Filters
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
   const [statusFilter, setStatusFilter] = useState('');
   const [sourceFilter, setSourceFilter] = useState('');
   const [priorityFilter, setPriorityFilter] = useState('');
@@ -85,10 +89,25 @@ export const StaffLeadsPage = () => {
     fetchMetadata();
   }, []);
 
+  // Immediate debounced search as user types
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   useEffect(() => {
     setPage(1);
-    fetchMyLeads(1, limit);
-  }, [statusFilter, sourceFilter, priorityFilter]);
+    fetchMyLeads(1, limit, debouncedSearch);
+  }, [debouncedSearch, statusFilter, sourceFilter, priorityFilter]);
 
   const fetchMetadata = async () => {
     try {
@@ -103,11 +122,11 @@ export const StaffLeadsPage = () => {
     }
   };
 
-  const fetchMyLeads = async (pageToFetch = page, limitToFetch = limit) => {
+  const fetchMyLeads = async (pageToFetch = page, limitToFetch = limit, searchToFetch = debouncedSearch) => {
     try {
       setLoading(true);
       const res = await api.get('/leads', {
-        search,
+        search: searchToFetch !== undefined ? searchToFetch : debouncedSearch,
         statusId: statusFilter,
         source: sourceFilter,
         priority: priorityFilter,
@@ -134,13 +153,25 @@ export const StaffLeadsPage = () => {
       setLeads([]);
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
   };
 
   const handleSearchSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (search === debouncedSearch) {
+      setPage(1);
+      fetchMyLeads(1, limit, search);
+    } else {
+      setDebouncedSearch(search);
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
     setPage(1);
-    fetchMyLeads(1, limit);
+    fetchMyLeads(1, limit, '');
   };
 
   const openAddModal = () => {
@@ -295,7 +326,7 @@ export const StaffLeadsPage = () => {
   const handleExportCSV = async () => {
     try {
       const params = {};
-      if (search && search.trim()) params.search = search.trim();
+      if (debouncedSearch && debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (statusFilter) params.statusId = statusFilter;
       if (sourceFilter) params.source = sourceFilter;
       if (priorityFilter) params.priority = priorityFilter;
@@ -339,17 +370,40 @@ export const StaffLeadsPage = () => {
         {/* Filter Bar */}
         <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: '240px' }}>
-            <div style={{ position: 'relative', width: '100%', maxWidth: '320px' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: '340px' }}>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Search by name, phone, company..."
+                placeholder="Search by name, phone (+91), company..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingRight: search ? '32px' : '12px' }}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
-            <button type="submit" className="btn btn-secondary">
-              <Search size={16} />
+            <button type="submit" className="btn btn-secondary" title="Search leads">
+              {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
             </button>
           </form>
 

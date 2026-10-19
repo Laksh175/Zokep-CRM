@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, DollarSign, Calendar, Mail, Phone, Building2, Search, ArrowUpRight } from 'lucide-react';
+import { UserCheck, DollarSign, Calendar, Mail, Phone, Building2, Search, ArrowUpRight, Loader2, X } from 'lucide-react';
 import Header from '../../components/Header';
 import StatsCard from '../../components/StatsCard';
 import Badge from '../../components/Badge';
@@ -13,15 +13,35 @@ export const CustomerListPage = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Immediate debounced search as user types
+  useEffect(() => {
+    if (!search) {
+      setDebouncedSearch('');
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setIsSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   useEffect(() => {
-    fetchCustomers();
-  }, []);
+    fetchCustomers(debouncedSearch);
+  }, [debouncedSearch]);
 
-  const fetchCustomers = async () => {
+  const fetchCustomers = async (searchToFetch = debouncedSearch) => {
     try {
       setLoading(true);
-      const res = await api.get('/leads', { isConverted: 'true', search });
+      const res = await api.get('/leads', {
+        isConverted: 'true',
+        search: searchToFetch !== undefined ? searchToFetch : debouncedSearch,
+      });
       if (res.success) {
         setCustomers(res.data);
       }
@@ -29,7 +49,14 @@ export const CustomerListPage = () => {
       error(err.message || 'Failed to fetch customer list');
     } finally {
       setLoading(false);
+      setIsSearching(false);
     }
+  };
+
+  const handleClearSearch = () => {
+    setSearch('');
+    setDebouncedSearch('');
+    fetchCustomers('');
   };
 
   const totalWonRevenue = customers.reduce(
@@ -63,18 +90,49 @@ export const CustomerListPage = () => {
         </div>
 
         <div className="glass-panel" style={{ padding: '20px' }}>
-          <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', maxWidth: '360px' }}>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="Search customer name, company, phone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <button className="btn btn-secondary" onClick={fetchCustomers}>
-              <Search size={16} />
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              fetchCustomers(search);
+            }}
+            style={{ marginBottom: '16px', display: 'flex', gap: '8px', maxWidth: '380px' }}
+          >
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Search customer, phone (+91)..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{ paddingRight: search ? '32px' : '12px', width: '100%' }}
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            <button type="submit" className="btn btn-secondary" title="Search customers">
+              {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
             </button>
-          </div>
+          </form>
 
           {loading ? (
             <p style={{ textAlign: 'center', padding: '24px 0' }}>Loading customers...</p>

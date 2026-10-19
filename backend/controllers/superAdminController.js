@@ -3,6 +3,7 @@ import Plan from '../models/Plan.js';
 import Subscription from '../models/Subscription.js';
 import Lead from '../models/Lead.js';
 import { formatDate } from '../utils/dateFormatter.js';
+import { escapeRegex } from './leadController.js';
 
 // @desc    Get Super Admin Platform Dashboard Metrics & Analytics
 // @route   GET /api/superadmin/analytics
@@ -145,13 +146,30 @@ export const getAllAdmins = async (req, res) => {
     if (status === 'active') query.isActive = true;
     if (status === 'inactive') query.isActive = false;
 
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { companyName: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
+    if (search && typeof search === 'string' && search.trim()) {
+      const term = search.trim();
+      const escaped = escapeRegex(term);
+      const orList = [
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+        { companyName: { $regex: escaped, $options: 'i' } },
+        { phone: { $regex: escaped, $options: 'i' } },
       ];
+
+      const digits = term.replace(/\D/g, '');
+      if (digits.length >= 2) {
+        const flexPattern = digits.split('').join('[\\s\\-\\.\\(\\)]*');
+        orList.push({ phone: { $regex: flexPattern, $options: 'i' } });
+
+        if (digits.startsWith('91') && digits.length > 2) {
+          const core = digits.slice(2);
+          if (core.length >= 2) {
+            orList.push({ phone: { $regex: core.split('').join('[\\s\\-\\.\\(\\)]*'), $options: 'i' } });
+          }
+        }
+      }
+
+      query.$or = orList;
     }
 
     const admins = await User.find(query)
