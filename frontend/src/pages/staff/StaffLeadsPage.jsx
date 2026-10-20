@@ -16,6 +16,7 @@ import {
   ChevronRight,
   X,
   Edit3,
+  Loader2,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -78,6 +79,7 @@ export const StaffLeadsPage = () => {
   const [activities, setActivities] = useState([]);
   const [followupNote, setFollowupNote] = useState('');
   const [newStatusId, setNewStatusId] = useState('');
+  const [newNextFollowup, setNewNextFollowup] = useState('');
   const [savingFollowup, setSavingFollowup] = useState(false);
 
   // Edit Follow-up Modal
