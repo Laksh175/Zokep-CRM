@@ -32,6 +32,7 @@ import {
   ChevronRight,
   X,
   Edit3,
+  Loader2,
 } from 'lucide-react';
 import Header from '../../components/Header';
 import Modal from '../../components/Modal';
@@ -1262,7 +1263,7 @@ export const LeadManagementPage = () => {
                               {/* Convert */}
                               {!lead.isConverted && (
                                 <button
-                                  onClick={() => handleConvertLead(lead._id)}
+                                  onClick={() => handleConvertToCustomer(lead)}
                                   className="btn btn-success btn-action"
                                   title="Convert to Customer Deal"
                                 >
