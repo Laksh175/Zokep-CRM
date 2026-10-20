@@ -13,12 +13,9 @@ backend/dist/
 *.local
 
 # Environment variables & secrets (keep .env.example)
-.env
 .env.development.local
 .env.test.local
 .env.production.local
-.env.local
-**/.env
 !**/.env.example
 
 # Logs
@@ -39,10 +36,10 @@ temp/
 # OS and Editor files
 .DS_Store
 Thumbs.db
-.vscode/
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+config.bat
